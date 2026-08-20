@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>🌸 沐光花語｜花田小屋</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --cream:#FFF6E8;
+    --cream-deep:#FBE9CC;
+    --leaf:#3E9166;
+    --leaf-deep:#276148;
+    --ink:#2B4636;
+    --pink:#FF7FA8;
+    --pink-deep:#E85D8D;
+    --yellow:#FFC93C;
+    --sky:#5FC1DE;
+    --purple:#B080E0;
+    --white:#FFFFFF;
+
+    --shadow:
+      0 7px 0 rgba(39,97,72,.13);
+
+    --soft-shadow:
+      0 4px 0 rgba(39,97,72,.10);
+  }
+
+  *{
+    box-sizing:border-box;
+  }
+
+  html{
+    scroll-behavior:smooth;
+  }
+
+  body{
+    margin:0;
+    min-height:100vh;
+    overflow-x:hidden;
+
+    font-family:
+      "Zen Maru Gothic",
+      "Noto Sans TC",
+      sans-serif;
+
+    color:var(--ink);
+
+    background:
+      radial-gradient(
+        circle at 8% 12%,
+        rgba(255,201,60,.20),
+        transparent 30%
+      ),
+      radial-gradient(
+        circle at 92% 10%,
+        rgba(255,127,168,.18),
+        transparent 32%
+      ),
+      radial-gradient(
+        circle at 50% 92%,
+        rgba(95,193,222,.16),
+        transparent 36%
+      ),
+      var(--cream);
+  }
+
+  /* =========================
+     漂浮裝飾
+  ========================= */
+
+  .float{
+    position:fixed;
+    z-index:0;
+    pointer-events:none;
+    opacity:.55;
+
+    font-size:clamp(22px,3vw,34px);
+
+    animation:
+      floating 7s ease-in-out infinite;
+  }
+
+  .f1{
+    top:8%;
+    left:4%;
+  }
+
+  .f2{
+    top:25%;
+    right:5%;
+    animation-delay:1s;
+  }
+
+  .f3{
+    top:62%;
+    left:2%;
+    animation-delay:2s;
+  }
+
+  .f4{
+    bottom:12%;
+    right:6%;
+    animation-delay:3s;
+  }
+
+  .f5{
+    top:45%;
+    right:1%;
+    font-size:20px;
+    animation-delay:1.8s;
+  }
+
+  @keyframes floating{
+    0%,100%{
+      transform:
+        translateY(0)
+        rotate(-5deg);
+    }
+
+    50%{
+      transform:
+        translateY(-20px)
+        rotate(7deg);
+    }
+  }
+
+  /* =========================
+     主容器
+  ========================= */
+
+  .wrap{
+    position:relative;
+    z-index:1;
+
+    width:min(1080px, calc(100% - 40px));
+
+    margin:0 auto;
+
+    padding:
+      28px
+      0
+      70px;
+  }
+
+  /* =========================
+     花朵頂部
+  ========================= */
+
+  .flowers{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:10px;
+
+    margin-bottom:8px;
+  }
+
+  .flowers span{
+    display:inline-block;
+
+    font-size:
+      clamp(18px,2.5vw,28px);
+
+    animation:
+      pop .6s
+      cubic-bezier(.34,1.56,.64,1)
+      forwards;
+
+    transform:scale(0);
+  }
+
+  .flowers span:nth-child(1){animation-delay:.05s;}
+  .flowers span:nth-child(2){animation-delay:.12s;}
+  .flowers span:nth-child(3){animation-delay:.19s;}
+  .flowers span:nth-child(4){animation-delay:.26s;}
+  .flowers span:nth-child(5){animation-delay:.33s;}
+  .flowers span:nth-child(6){animation-delay:.40s;}
+  .flowers span:nth-child(7){animation-delay:.47s;}
+
+  @keyframes pop{
+    0%{
+      transform:
+        scale(0)
+        rotate(-30deg);
+      opacity:0;
+    }
+
+    70%{
+      transform:
+        scale(1.25)
+        rotate(8deg);
+      opacity:1;
+    }
+
+    100%{
+      transform:
+        scale(1)
+        rotate(0);
+      opacity:1;
+    }
+  }
+
+  /* =========================
+     Hero
+  ========================= */
+
+  .hero{
+    text-align:center;
+
+    padding:
+      12px
+      0
+      34px;
+  }
+
+  .mascot{
+    width:78px;
+    height:78px;
+
+    margin:0 auto 8px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    font-size:54px;
+
+    animation:
+      mascot-bob
+      2.5s
+      ease-in-out
+      infinite;
+  }
+
+  @keyframes mascot-bob{
+    0%,100%{
+      transform:
+        translateY(0)
+        rotate(-3deg);
+    }
+
+    50%{
+      transform:
+        translateY(-8px)
+        rotate(3deg);
+    }
+  }
+
+  h1{
+    margin:0;
+
+    font-family:
+      "Baloo 2",
+      "Zen Maru Gothic",
+      sans-serif;
+
+    font-size:
+      clamp(38px,7vw,64px);
+
+    line-height:1.05;
+
+    font-weight:800;
+
+    letter-spacing:1px;
+
+    color:var(--leaf-deep);
+
+    text-shadow:
+      4px 4px 0 var(--white);
+  }
+
+  .hero-sub{
+    margin:
+      14px
+      auto
+      0;
+
+    max-width:600px;
+
+    color:#648070;
+
+    font-size:
+      clamp(14px,2vw,17px);
+
+    line-height:1.8;
+  }
+
+  .welcome{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+
+    margin-top:18px;
+
+    padding:7px 17px;
+
+    border:
+      2px dashed
+      var(--leaf);
+
+    border-radius:999px;
+
+    background:rgba(255,255,255,.8);
+
+    color:var(--leaf-deep);
+
+    font-size:13px;
+    font-weight:700;
+  }
+
+  /* =========================
+     主入口
+  ========================= */
+
+  .entrances{
+    display:grid;
+
+    grid-template-columns:
+      repeat(2, minmax(0,1fr));
+
+    gap:22px;
+
+    max-width:850px;
+
+    margin:0 auto;
+  }
+
+  .entrance{
+    position:relative;
+
+    min-height:255px;
+
+    padding:28px 26px 25px;
+
+    text-decoration:none;
+
+    color:inherit;
+
+    background:var(--white);
+
+    border-radius:26px;
+
+    border:
+      3px solid
+      rgba(39,97,72,.06);
+
+    box-shadow:var(--shadow);
+
+    overflow:hidden;
+
+    transition:
+      transform .22s ease,
+      box-shadow .22s ease;
+  }
+
+  .entrance::after{
+    content:"";
+
+    position:absolute;
+
+    width:130px;
+    height:130px;
+
+    border-radius:50%;
+
+    right:-40px;
+    bottom:-50px;
+
+    background:
+      rgba(255,201,60,.15);
+  }
+
+  .entrance:hover{
+    transform:translateY(-7px);
+
+    box-shadow:
+      0 13px 0
+      rgba(39,97,72,.14);
+  }
+
+  .entrance:active{
+    transform:
+      translateY(-2px);
+  }
+
+  .entrance.main{
+    border-color:
+      rgba(62,145,102,.20);
+  }
+
+  .entrance.secondary{
+    border-color:
+      rgba(255,127,168,.18);
+  }
+
+  .entrance-icon{
+    width:72px;
+    height:72px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    border-radius:20px;
+
+    margin-bottom:15px;
+
+    font-size:42px;
+
+    background:
+      linear-gradient(
+        135deg,
+        #EAF6EE,
+        #FFF6E8
+      );
+  }
+
+  .secondary .entrance-icon{
+    background:
+      linear-gradient(
+        135deg,
+        #FFF0F5,
+        #FFF8E9
+      );
+  }
+
+  .entrance h2{
+    margin:0 0 7px;
+
+    font-family:
+      "Baloo 2",
+      sans-serif;
+
+    font-size:27px;
+
+    color:var(--leaf-deep);
+  }
+
+  .secondary h2{
+    color:var(--pink-deep);
+  }
+
+  .entrance p{
+    margin:0;
+
+    color:#789080;
+
+    font-size:14px;
+
+    line-height:1.8;
+  }
+
+  .enter{
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+
+    margin-top:18px;
+
+    padding:7px 13px;
+
+    border-radius:999px;
+
+    background:#EFF7F1;
+
+    color:var(--leaf-deep);
+
+    font-size:12px;
+    font-weight:800;
+  }
+
+  .secondary .enter{
+    background:#FFF0F5;
+    color:var(--pink-deep);
+  }
+
+  /* =========================
+     花田狀態小卡
+  ========================= */
+
+  .status-box{
+    max-width:850px;
+
+    margin:
+      24px
+      auto
+      0;
+
+    padding:
+      17px
+      20px;
+
+    display:flex;
+    align-items:center;
+    justify-content:center;
+
+    gap:10px;
+
+    background:
+      rgba(255,255,255,.72);
+
+    border:
+      2px dashed
+      #D5E5D9;
+
+    border-radius:18px;
+
+    color:#688273;
+
+    font-size:13px;
+
+    text-align:center;
+  }
+
+  .status-dot{
+    width:9px;
+    height:9px;
+
+    flex-shrink:0;
+
+    border-radius:50%;
+
+    background:#62B77F;
+
+    box-shadow:
+      0 0 0 5px
+      rgba(98,183,127,.13);
+  }
+
+  /* =========================
+     使用提醒
+  ========================= */
+
+  .notice{
+    max-width:850px;
+
+    margin:
+      42px
+      auto
+      0;
+
+    padding:
+      23px
+      25px;
+
+    border-radius:20px;
+
+    background:
+      linear-gradient(
+        180deg,
+        #C99A5B,
+        #B7864A
+      );
+
+    color:#FFF3DD;
+
+    box-shadow:
+      0 7px 0 #8E6437;
+  }
+
+  .notice-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+
+    margin-bottom:11px;
+
+    font-family:
+      "Baloo 2",
+      sans-serif;
+
+    font-size:20px;
+    font-weight:800;
+  }
+
+  .notice p{
+    margin:0;
+
+    font-size:13px;
+
+    line-height:1.8;
+
+    opacity:.96;
+  }
+
+  .notice strong{
+    color:#FFF;
+  }
+
+  /* =========================
+     Footer
+  ========================= */
+
+  footer{
+    margin-top:34px;
+
+    text-align:center;
+
+    color:#9AA88E;
+
+    font-size:12px;
+
+    line-height:1.8;
+  }
+
+  .footer-flower{
+    font-size:20px;
+
+    margin-bottom:6px;
+  }
+
+  /* =========================
+     RWD
+  ========================= */
+
+  @media(max-width:700px){
+
+    .wrap{
+      width:min(100% - 28px, 1080px);
+
+      padding-top:20px;
+    }
+
+    .entrances{
+      grid-template-columns:1fr;
+
+      gap:17px;
+    }
+
+    .entrance{
+      min-height:auto;
+
+      padding:23px 21px;
+    }
+
+    .status-box{
+      font-size:12px;
+    }
+  }
+
+  @media(max-width:430px){
+
+    h1{
+      font-size:40px;
+    }
+
+    .hero-sub{
+      font-size:13px;
+    }
+
+    .flowers{
+      gap:6px;
+    }
+
+    .flowers span{
+      font-size:19px;
+    }
+  }
+
+  @media(prefers-reduced-motion:reduce){
+
+    *,
+    *::before,
+    *::after{
+      animation-duration:.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;
+    }
+  }
+</style>
+</head>
+
+<body>
+
+<!-- 飄浮的小葉子 -->
+<span class="float f1">🍃</span>
+<span class="float f2">🌱</span>
+<span class="float f3">🍃</span>
+<span class="float f4">🌱</span>
+<span class="float f5">🌿</span>
+
+
+<div class="wrap">
+
+  <!-- 頂部花朵 -->
+  <div class="flowers" aria-hidden="true">
+    <span>🌸</span>
+    <span>🌼</span>
+    <span>🌷</span>
+    <span>🌺</span>
+    <span>🌻</span>
+    <span>🪻</span>
+    <span>🌸</span>
+  </div>
+
+
+  <!-- Hero -->
+  <header class="hero">
+
+    <div class="mascot">
+      🌱
+    </div>
+
+    <h1>沐光花語</h1>
+
+    <p class="hero-sub">
+      歡迎來到沐沐的小小花田 🌷<br>
+      這裡記錄著花田、開花時間，以及大家一起收成的小小足跡。
+    </p>
+
+    <div class="welcome">
+      🌿 今日也一起好好種花吧
+    </div>
+
+  </header>
+
+
+  <!-- 入口 -->
+  <main>
+
+    <section class="entrances">
+
+      <!-- 花田觀測 -->
+      <a
+        class="entrance main"
+        href="pikmin-flower-announcement -4.0.html"
+      >
+
+        <div class="entrance-icon">
+          🌸
+        </div>
+
+        <h2>花田觀測</h2>
+
+        <p>
+          查看目前的花田公告、所在地區與座標，
+          也可以查看開花與收成狀態。
+        </p>
+
+        <span class="enter">
+          進入花田 →
+        </span>
+
+      </a>
+
+
+      <!-- 花田規則 -->
+      <a
+        class="entrance secondary"
+        href="#rules"
+      >
+
+        <div class="entrance-icon">
+          🧺
+        </div>
+
+        <h2>花田小屋</h2>
+
+        <p>
+          查看花田使用提醒與收成規則，
+          讓每一朵花都能好好地開完。
+        </p>
+
+        <span class="enter">
+          查看小提醒 →
+        </span>
+
+      </a>
+
+    </section>
+
+
+    <!-- 狀態 -->
+    <div class="status-box">
+
+      <span class="status-dot"></span>
+
+      <span>
+        🌱 花田觀測站正常運作中　
+        資料由沐沐親自更新
+      </span>
+
+    </div>
+
+
+    <!-- 小提醒 -->
+    <section
+      class="notice"
+      id="rules"
+    >
+
+      <div class="notice-title">
+        🧺 收成小提醒
+      </div>
+
+      <p>
+        <strong>✗</strong>
+        未經同意請勿轉傳座標，也不要偷田。<br>
+
+        <strong>✗</strong>
+        還是花苗或花苞的田請勿踩踏。<br>
+
+        <strong>✓</strong>
+        開花後 1 小時內可踩果實，手腳要快。<br>
+
+        <strong>✓</strong>
+        花瓣不夠時，派 1 隻皮克敏種花就好。<br>
+
+        <strong>✓</strong>
+        此網站僅顯示首株座標，如需完整路徑請洽沐沐。
+      </p>
+
+    </section>
+
+  </main>
+
+
+  <!-- Footer -->
+  <footer>
+
+    <div class="footer-flower">
+      🌷 🌼 🌸
+    </div>
+
+    本頁面僅為沐的花田同好及群友分享交流使用<br>
+
+    請愛惜花田，讓沐的種花熱情不滅 🔥
+
+  </footer>
+
+</div>
+
+
+<script>
+
+  /*
+   * 讓入口卡片載入時有一點點延遲感
+   */
+  document.querySelectorAll('.entrance').forEach((card, index) => {
+
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(14px)';
+
+    setTimeout(() => {
+
+      card.style.transition =
+        'opacity .5s ease, transform .5s ease';
+
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+
+    }, 180 + index * 120);
+
+  });
+
+
+  /*
+   * 點擊「花田小屋」時平滑滑到提醒區
+   */
+  document.querySelector('.secondary').addEventListener(
+    'click',
+    function(e){
+
+      const target =
+        document.querySelector('#rules');
+
+      if(target){
+
+        e.preventDefault();
+
+        target.scrollIntoView({
+          behavior:'smooth',
+          block:'center'
+        });
+
+      }
+
+    }
+  );
+
+</script>
+
+</body>
+</html>
