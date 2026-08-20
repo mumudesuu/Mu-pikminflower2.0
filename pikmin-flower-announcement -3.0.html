@@ -1,0 +1,3371 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🌸 沐光花語 花田觀測</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+<style>
+
+  :root{
+    --cream:#FFF6E8;
+    --cream-deep:#FBE9CC;
+    --leaf:#3E9166;
+    --leaf-deep:#276148;
+    --ink:#2B4636;
+    --pink:#FF7FA8;
+    --pink-deep:#E85D8D;
+    --yellow:#FFC93C;
+    --sky:#5FC1DE;
+    --purple:#B080E0;
+    --white:#FFFFFF;
+    --red:#D8464E;
+
+    --card-shadow:
+      0 6px 0 rgba(39,97,72,0.14);
+  }
+
+  *{
+    box-sizing:border-box;
+  }
+
+  html{
+    scroll-behavior:smooth;
+  }
+
+  body{
+    margin:0;
+
+    font-family:
+      "Zen Maru Gothic",
+      "Noto Sans TC",
+      sans-serif;
+
+    background:
+      radial-gradient(
+        circle at 10% 15%,
+        rgba(255,201,60,0.18),
+        transparent 40%
+      ),
+      radial-gradient(
+        circle at 90% 10%,
+        rgba(255,127,168,0.16),
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 50% 90%,
+        rgba(95,193,222,0.15),
+        transparent 40%
+      ),
+      var(--cream);
+
+    color:var(--ink);
+
+    min-height:100vh;
+
+    overflow-x:hidden;
+  }
+
+  /* ---------- decorative floating leaves ---------- */
+
+  .drift{
+    position:fixed;
+
+    pointer-events:none;
+
+    z-index:0;
+
+    opacity:0.55;
+
+    animation:
+      drift
+      9s
+      ease-in-out
+      infinite;
+
+    font-size:
+      clamp(22px,3vw,34px);
+  }
+
+  .drift.d1{
+    top:10%;
+    left:4%;
+    animation-delay:0s;
+  }
+
+  .drift.d2{
+    top:65%;
+    left:2%;
+    animation-delay:1.5s;
+  }
+
+  .drift.d3{
+    top:20%;
+    right:5%;
+    animation-delay:0.7s;
+  }
+
+  .drift.d4{
+    top:75%;
+    right:6%;
+    animation-delay:2.2s;
+  }
+
+  .drift.d5{
+    top:40%;
+    left:1%;
+    animation-delay:3s;
+    font-size:20px;
+  }
+
+  @keyframes drift{
+
+    0%,100%{
+      transform:
+        translateY(0)
+        rotate(-4deg);
+    }
+
+    50%{
+      transform:
+        translateY(-22px)
+        rotate(6deg);
+    }
+
+  }
+
+  @media (prefers-reduced-motion: reduce){
+
+    *{
+      animation-duration:0.01ms !important;
+      animation-iteration-count:1 !important;
+      transition-duration:0.01ms !important;
+    }
+
+  }
+
+  .wrap{
+    position:relative;
+
+    z-index:1;
+
+    max-width:1080px;
+
+    margin:0 auto;
+
+    padding:
+      28px
+      20px
+      80px;
+  }
+
+  /* ---------- bloom strip ---------- */
+
+  .bloom-strip{
+    display:flex;
+
+    justify-content:center;
+
+    gap:10px;
+
+    margin-bottom:6px;
+
+    flex-wrap:wrap;
+  }
+
+  .bloom-strip span{
+    display:inline-block;
+
+    font-size:
+      clamp(18px,2.4vw,26px);
+
+    transform:scale(0);
+
+    animation:
+      bloom-pop
+      0.6s
+      cubic-bezier(.34,1.56,.64,1)
+      forwards;
+  }
+
+  .bloom-strip span:nth-child(1){
+    animation-delay:.05s;
+  }
+
+  .bloom-strip span:nth-child(2){
+    animation-delay:.15s;
+  }
+
+  .bloom-strip span:nth-child(3){
+    animation-delay:.25s;
+  }
+
+  .bloom-strip span:nth-child(4){
+    animation-delay:.35s;
+  }
+
+  .bloom-strip span:nth-child(5){
+    animation-delay:.45s;
+  }
+
+  .bloom-strip span:nth-child(6){
+    animation-delay:.55s;
+  }
+
+  .bloom-strip span:nth-child(7){
+    animation-delay:.65s;
+  }
+
+  .bloom-strip span:nth-child(8){
+    animation-delay:.75s;
+  }
+
+  .bloom-strip span:nth-child(9){
+    animation-delay:.85s;
+  }
+
+  @keyframes bloom-pop{
+
+    0%{
+      transform:
+        scale(0)
+        rotate(-30deg);
+
+      opacity:0;
+    }
+
+    70%{
+      transform:
+        scale(1.25)
+        rotate(8deg);
+
+      opacity:1;
+    }
+
+    100%{
+      transform:
+        scale(1)
+        rotate(0);
+
+      opacity:1;
+    }
+
+  }
+
+  /* ---------- header ---------- */
+
+  header{
+    text-align:center;
+
+    margin-bottom:28px;
+  }
+
+  .mascot{
+    display:inline-flex;
+
+    align-items:center;
+    justify-content:center;
+
+    width:64px;
+    height:64px;
+
+    margin-bottom:6px;
+
+    font-size:50px;
+
+    animation:
+      bob
+      2.4s
+      ease-in-out
+      infinite;
+  }
+
+  @keyframes bob{
+
+    0%,100%{
+      transform:
+        translateY(0)
+        rotate(-3deg);
+    }
+
+    50%{
+      transform:
+        translateY(-8px)
+        rotate(3deg);
+    }
+
+  }
+
+  h1{
+    font-family:
+      "Baloo 2",
+      "Zen Maru Gothic",
+      sans-serif;
+
+    font-weight:800;
+
+    font-size:
+      clamp(28px,5vw,44px);
+
+    margin:
+      4px
+      0
+      8px;
+
+    color:var(--leaf-deep);
+
+    letter-spacing:1px;
+
+    text-shadow:
+      3px 3px 0 var(--white);
+  }
+
+  header p.sub{
+    font-size:
+      clamp(13px,1.8vw,16px);
+
+    color:#5C7B6A;
+
+    margin:0;
+
+    font-weight:500;
+  }
+
+  .update-pill{
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    margin-top:14px;
+
+    background:var(--white);
+
+    border:
+      2px dashed
+      var(--leaf);
+
+    color:var(--leaf-deep);
+
+    padding:
+      6px
+      16px;
+
+    border-radius:999px;
+
+    font-size:13px;
+
+    font-weight:700;
+  }
+
+  .update-pill button{
+    border:none;
+
+    background:var(--leaf);
+
+    color:#fff;
+
+    font-family:inherit;
+
+    font-weight:700;
+
+    font-size:12px;
+
+    padding:
+      4px
+      12px;
+
+    border-radius:999px;
+
+    cursor:pointer;
+
+    transition:
+      transform .15s ease,
+      background .15s ease;
+  }
+
+  .update-pill button:hover{
+    background:var(--leaf-deep);
+
+    transform:
+      translateY(-1px);
+  }
+
+  .update-pill button:active{
+    transform:
+      translateY(1px)
+      scale(.96);
+  }
+
+  /* ---------- firebase status ---------- */
+
+  .sync-pill{
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:7px;
+
+    margin-top:9px;
+
+    background:#EFF7F1;
+
+    border:
+      2px dashed
+      #A8D2B5;
+
+    color:var(--leaf-deep);
+
+    padding:
+      6px
+      15px;
+
+    border-radius:999px;
+
+    font-size:12px;
+
+    font-weight:700;
+  }
+
+  .sync-dot{
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:#64B77D;
+
+    box-shadow:
+      0 0 0 4px
+      rgba(100,183,125,.14);
+  }
+
+  .sync-pill.offline{
+    background:#FFF1E4;
+
+    border-color:#F2C28E;
+
+    color:#B76D2C;
+  }
+
+  .sync-pill.offline .sync-dot{
+    background:#E58A45;
+
+    box-shadow:
+      0 0 0 4px
+      rgba(229,138,69,.13);
+  }
+
+  /* ---------- admin ---------- */
+
+  .admin-pill{
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    margin-top:10px;
+
+    background:var(--white);
+
+    border:
+      2px dashed
+      var(--purple);
+
+    color:#6B4A9A;
+
+    padding:
+      6px
+      16px;
+
+    border-radius:999px;
+
+    font-size:13px;
+
+    font-weight:700;
+  }
+
+  .admin-pill.is-admin{
+    border-color:var(--leaf);
+
+    color:var(--leaf-deep);
+
+    background:#EAF6EE;
+  }
+
+  .admin-pill button{
+    border:none;
+
+    font-family:inherit;
+
+    font-weight:700;
+
+    font-size:12px;
+
+    padding:
+      4px
+      12px;
+
+    border-radius:999px;
+
+    cursor:pointer;
+
+    transition:
+      transform .15s ease,
+      background .15s ease;
+
+    background:var(--purple);
+
+    color:#fff;
+  }
+
+  .admin-pill.is-admin button{
+    background:#D8464E;
+  }
+
+  .admin-pill button:hover{
+    transform:
+      translateY(-1px);
+
+    filter:brightness(1.05);
+  }
+
+  .admin-pill button:active{
+    transform:
+      translateY(1px)
+      scale(.96);
+  }
+
+  /* ---------- modal ---------- */
+
+  .modal-overlay{
+    position:fixed;
+
+    inset:0;
+
+    background:
+      rgba(43,70,54,0.45);
+
+    display:flex;
+
+    align-items:center;
+
+    justify-content:center;
+
+    z-index:50;
+
+    padding:20px;
+  }
+
+  .modal-box{
+    background:var(--white);
+
+    border-radius:22px;
+
+    padding:
+      26px
+      24px;
+
+    max-width:360px;
+
+    width:100%;
+
+    text-align:center;
+
+    box-shadow:
+      0 10px 0
+      rgba(39,97,72,0.18);
+  }
+
+  .modal-box h3{
+    font-family:
+      "Baloo 2",
+      sans-serif;
+
+    color:var(--leaf-deep);
+
+    margin:
+      0
+      0
+      6px;
+
+    font-size:20px;
+  }
+
+  .modal-box p{
+    font-size:13px;
+
+    color:#7C9686;
+
+    margin:
+      0
+      0
+      16px;
+
+    line-height:1.7;
+  }
+
+  .modal-box input{
+    width:100%;
+
+    font-family:
+      "Zen Maru Gothic",
+      sans-serif;
+
+    font-size:15px;
+
+    padding:
+      11px
+      13px;
+
+    border-radius:12px;
+
+    border:
+      2px solid
+      #D9E8DD;
+
+    margin-bottom:10px;
+
+    outline:none;
+
+    transition:
+      border-color .15s ease;
+  }
+
+  .modal-box input:focus{
+    border-color:var(--leaf);
+  }
+
+  .modal-box input + input{
+    margin-top:2px;
+  }
+
+  .modal-error{
+    font-size:12px;
+
+    color:#D8464E;
+
+    font-weight:700;
+
+    min-height:18px;
+
+    margin-bottom:8px;
+  }
+
+  .modal-actions{
+    display:flex;
+
+    gap:10px;
+  }
+
+  .modal-actions button{
+    flex:1;
+
+    border:none;
+
+    font-family:inherit;
+
+    font-weight:700;
+
+    font-size:14px;
+
+    padding:10px 0;
+
+    border-radius:12px;
+
+    cursor:pointer;
+
+    transition:
+      transform .15s ease;
+  }
+
+  .modal-actions .confirm{
+    background:var(--leaf);
+
+    color:#fff;
+  }
+
+  .modal-actions .cancel{
+    background:#EFEAE0;
+
+    color:#6B7C71;
+  }
+
+  .modal-actions button:active{
+    transform:scale(.96);
+  }
+
+  /* ---------- filter ---------- */
+
+  .filter-bar{
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:10px;
+
+    justify-content:center;
+
+    margin:
+      26px
+      0
+      30px;
+  }
+
+  .chip{
+    border:none;
+
+    cursor:pointer;
+
+    font-family:
+      "Zen Maru Gothic",
+      sans-serif;
+
+    font-weight:700;
+
+    font-size:14px;
+
+    padding:
+      9px
+      18px;
+
+    border-radius:999px;
+
+    background:var(--white);
+
+    color:var(--ink);
+
+    box-shadow:
+      0 3px 0
+      rgba(43,70,54,0.15);
+
+    display:inline-flex;
+
+    align-items:center;
+
+    gap:6px;
+
+    transition:
+      transform .15s ease,
+      box-shadow .15s ease,
+      background .15s ease,
+      color .15s ease;
+  }
+
+  .chip:hover{
+    transform:
+      translateY(-2px);
+  }
+
+  .chip.active{
+    background:var(--leaf);
+
+    color:#fff;
+
+    box-shadow:
+      0 3px 0
+      var(--leaf-deep);
+  }
+
+  .chip .dot{
+    width:10px;
+    height:10px;
+
+    border-radius:50%;
+
+    display:inline-block;
+  }
+
+  /* ---------- cards ---------- */
+
+  .grid{
+    display:grid;
+
+    grid-template-columns:
+      repeat(
+        auto-fill,
+        minmax(280px,1fr)
+      );
+
+    gap:20px;
+  }
+
+  .card{
+    background:var(--white);
+
+    border-radius:22px;
+
+    padding:
+      20px
+      20px
+      18px;
+
+    box-shadow:var(--card-shadow);
+
+    border:
+      3px solid
+      rgba(39,97,72,0.06);
+
+    position:relative;
+
+    transition:
+      transform .2s ease,
+      box-shadow .2s ease;
+
+    opacity:0;
+
+    transform:
+      translateY(14px)
+      scale(.97);
+
+    animation:
+      card-in
+      .5s
+      ease
+      forwards;
+  }
+
+  .card:hover{
+    transform:
+      translateY(-4px);
+
+    box-shadow:
+      0 10px 0
+      rgba(39,97,72,0.14);
+  }
+
+  @keyframes card-in{
+
+    to{
+      opacity:1;
+
+      transform:
+        translateY(0)
+        scale(1);
+    }
+
+  }
+
+  .card.harvest-glow{
+    border:
+      3px solid
+      var(--yellow);
+
+    animation:
+      card-in .5s ease forwards,
+      harvest-pulse 1.6s ease-in-out infinite;
+  }
+
+  @keyframes harvest-pulse{
+
+    0%,100%{
+      box-shadow:
+        0 0 0 5px
+        rgba(255,201,60,0.28),
+        0 8px 0
+        rgba(39,97,72,0.14);
+    }
+
+    50%{
+      box-shadow:
+        0 0 0 9px
+        rgba(255,201,60,0.14),
+        0 8px 0
+        rgba(39,97,72,0.14);
+    }
+
+  }
+
+  .card-top{
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:flex-start;
+
+    gap:8px;
+
+    margin-bottom:10px;
+  }
+
+  .card-loc{
+    font-family:
+      "Baloo 2",
+      sans-serif;
+
+    font-weight:700;
+
+    font-size:18px;
+
+    color:var(--leaf-deep);
+
+    display:flex;
+
+    align-items:center;
+
+    gap:6px;
+  }
+
+  .color-badge{
+    flex-shrink:0;
+
+    font-size:12px;
+
+    font-weight:700;
+
+    padding:
+      5px
+      11px;
+
+    border-radius:999px;
+
+    color:#fff;
+
+    white-space:nowrap;
+  }
+
+  /* ---------- status ---------- */
+
+  .status-row{
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+
+    font-size:13px;
+
+    font-weight:700;
+
+    margin-bottom:10px;
+
+    padding:
+      8px
+      12px;
+
+    border-radius:14px;
+
+    background:#EFF7F1;
+
+    color:var(--leaf-deep);
+
+    transition:
+      background .25s ease,
+      color .25s ease;
+  }
+
+  .status-row.harvest{
+    background:#FFF6DC;
+
+    color:#B9820A;
+  }
+
+  .status-row.cooling{
+    background:#FFF1E4;
+
+    color:#C97327;
+  }
+
+  .status-row.loading{
+    background:#F3F0EA;
+
+    color:#8A806E;
+  }
+
+  .status-dot{
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+
+    background:currentColor;
+
+    flex-shrink:0;
+  }
+
+  .countdown-time{
+    font-family:
+      "Baloo 2",
+      monospace;
+
+    font-size:16px;
+
+    letter-spacing:.5px;
+
+    margin-left:auto;
+  }
+
+  /* ---------- coordinate ---------- */
+
+  .coord-box{
+    display:flex;
+
+    align-items:center;
+
+    justify-content:space-between;
+
+    background:var(--cream-deep);
+
+    border:
+      2px dashed
+      #E3C48F;
+
+    border-radius:14px;
+
+    padding:
+      8px
+      10px
+      8px
+      14px;
+
+    gap:8px;
+
+    margin-bottom:10px;
+  }
+
+  .coord-box code{
+    font-family:
+      "Baloo 2",
+      monospace;
+
+    font-size:13px;
+
+    color:#7A5A2C;
+
+    font-weight:600;
+
+    word-break:break-all;
+  }
+
+  .copy-btn{
+    flex-shrink:0;
+
+    border:none;
+
+    background:var(--yellow);
+
+    color:#6B4A00;
+
+    font-weight:800;
+
+    font-size:12px;
+
+    padding:
+      7px
+      12px;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    transition:
+      transform .15s ease,
+      background .15s ease;
+  }
+
+  .copy-btn:hover{
+    background:#FFD966;
+
+    transform:
+      translateY(-1px);
+  }
+
+  .copy-btn:active{
+    transform:
+      translateY(1px)
+      scale(.95);
+  }
+
+  .copy-btn.copied{
+    background:var(--leaf);
+
+    color:#fff;
+  }
+
+  /* ---------- notes ---------- */
+
+  .note{
+    font-size:12.5px;
+
+    color:#8A7A5E;
+
+    background:#FFF9EE;
+
+    border-left:
+      3px solid
+      var(--yellow);
+
+    padding:
+      6px
+      10px;
+
+    border-radius:
+      0
+      10px
+      10px
+      0;
+
+    line-height:1.6;
+  }
+
+  .note div + div{
+    margin-top:2px;
+  }
+
+  /* ---------- controls ---------- */
+
+  .cooldown-btns{
+    display:flex;
+
+    flex-wrap:wrap;
+
+    gap:6px;
+
+    margin-top:12px;
+
+    margin-bottom:4px;
+  }
+
+  .cd-btn{
+    border:none;
+
+    cursor:pointer;
+
+    font-family:
+      "Zen Maru Gothic",
+      sans-serif;
+
+    font-weight:700;
+
+    font-size:12px;
+
+    padding:
+      6px
+      12px;
+
+    border-radius:10px;
+
+    background:#EAF3EC;
+
+    color:var(--leaf-deep);
+
+    transition:
+      transform .15s ease,
+      background .15s ease;
+  }
+
+  .cd-btn:hover{
+    background:#DCEEE1;
+
+    transform:
+      translateY(-1px);
+  }
+
+  .cd-btn:active{
+    transform:
+      translateY(1px)
+      scale(.95);
+  }
+
+  .cd-btn.reset{
+    background:#FDEAEA;
+
+    color:#C1454D;
+  }
+
+  .cd-btn.reset:hover{
+    background:#FBDCDC;
+  }
+
+  .locked-hint{
+    font-size:12px;
+
+    color:#A6947A;
+
+    background:#FBF3E4;
+
+    border-radius:10px;
+
+    padding:
+      8px
+      12px;
+
+    text-align:center;
+
+    margin-top:12px;
+  }
+
+  /* ---------- empty ---------- */
+
+  .empty{
+    text-align:center;
+
+    grid-column:1/-1;
+
+    padding:
+      50px
+      20px;
+
+    color:#7C9686;
+
+    font-weight:600;
+  }
+
+  .empty .emoji{
+    font-size:40px;
+
+    display:block;
+
+    margin-bottom:10px;
+  }
+
+  /* ---------- footer sign ---------- */
+
+  .sign{
+    margin-top:56px;
+
+    background:
+      linear-gradient(
+        180deg,
+        #C99A5B,
+        #B7864A
+      );
+
+    border-radius:18px;
+
+    padding:
+      24px
+      26px;
+
+    color:#FFF3DD;
+
+    box-shadow:
+      0 8px 0
+      #8E6437;
+
+    position:relative;
+  }
+
+  .sign::before{
+    content:"";
+
+    position:absolute;
+
+    top:-14px;
+
+    left:50%;
+
+    transform:
+      translateX(-50%);
+
+    width:50px;
+
+    height:14px;
+
+    background:#8E6437;
+
+    border-radius:
+      6px
+      6px
+      0
+      0;
+  }
+
+  .sign h2{
+    font-family:
+      "Baloo 2",
+      sans-serif;
+
+    margin:
+      0
+      0
+      12px;
+
+    font-size:20px;
+
+    display:flex;
+
+    align-items:center;
+
+    gap:8px;
+  }
+
+  .sign ul{
+    margin:0;
+
+    padding-left:2px;
+
+    list-style:none;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:8px;
+
+    font-size:14px;
+
+    line-height:1.6;
+  }
+
+  .sign li{
+    display:flex;
+
+    gap:8px;
+  }
+
+  .sign li b{
+    flex-shrink:0;
+  }
+
+  footer.credit{
+    text-align:center;
+
+    margin-top:30px;
+
+    font-size:12px;
+
+    color:#9AA88E;
+
+    line-height:1.7;
+  }
+
+  /* ---------- firebase error ---------- */
+
+  .firebase-error{
+    display:none;
+
+    max-width:700px;
+
+    margin:
+      15px
+      auto
+      0;
+
+    padding:
+      10px
+      14px;
+
+    border-radius:12px;
+
+    background:#FDEAEA;
+
+    color:#B83D46;
+
+    border:
+      2px solid
+      #F3C1C5;
+
+    font-size:12px;
+
+    line-height:1.6;
+
+    text-align:center;
+  }
+
+  .firebase-error.show{
+    display:block;
+  }
+
+  @media(max-width:520px){
+
+    .filter-bar{
+      gap:8px;
+    }
+
+    .chip{
+      padding:
+        7px
+        14px;
+
+      font-size:13px;
+    }
+
+    .coord-box{
+      align-items:flex-start;
+    }
+
+    .coord-box code{
+      font-size:12px;
+    }
+
+    .copy-btn{
+      padding:
+        7px
+        9px;
+    }
+
+  }
+
+</style>
+</head>
+
+<body>
+
+<span class="drift d1">🍃</span>
+<span class="drift d2">🌱</span>
+<span class="drift d3">🍃</span>
+<span class="drift d4">🌱</span>
+<span class="drift d5">🍃</span>
+
+<div class="wrap">
+
+  <div class="bloom-strip" aria-hidden="true">
+    <span>🌸</span>
+    <span>🌼</span>
+    <span>🌷</span>
+    <span>🌺</span>
+    <span>🌻</span>
+    <span>🌹</span>
+    <span>💮</span>
+    <span>🪻</span>
+    <span>🌸</span>
+  </div>
+
+  <header>
+
+    <div class="mascot">
+      🌱
+    </div>
+
+    <h1>
+      沐光花語 花田觀測
+    </h1>
+
+    <p class="sub">
+      沐沐種田中，未經同意請勿轉發，謝謝 🌱
+    </p>
+
+    <div class="update-pill">
+
+      <span id="updateTime">
+        連線中…
+      </span>
+
+      <button
+        id="refreshBtn"
+        type="button"
+      >
+        🔄 重新整理
+      </button>
+
+    </div>
+
+    <div
+      class="sync-pill"
+      id="syncPill"
+    >
+
+      <span class="sync-dot"></span>
+
+      <span id="syncStatus">
+        ☁️ 正在連接花田資料庫…
+      </span>
+
+    </div>
+
+    <div
+      class="admin-pill"
+      id="adminPill"
+    >
+
+      <span id="adminStatusText">
+        🔒 訪客模式
+      </span>
+
+      <button
+        id="adminBtn"
+        type="button"
+      >
+        管理員登入
+      </button>
+
+    </div>
+
+    <div
+      class="firebase-error"
+      id="firebaseError"
+    ></div>
+
+  </header>
+
+
+  <div id="modalRoot"></div>
+
+
+  <nav
+    class="filter-bar"
+    id="filterBar"
+    aria-label="依地區篩選"
+  >
+  </nav>
+
+
+  <main
+    class="grid"
+    id="grid"
+  >
+  </main>
+
+
+  <section class="sign">
+
+    <h2>
+      🧺 收成小提醒
+    </h2>
+
+    <ul>
+
+      <li>
+        <b>✗</b>
+        <span>
+          未經同意請勿轉傳座標，也不要偷田
+        </span>
+      </li>
+
+      <li>
+        <b>✗</b>
+        <span>
+          還是花苗或花苞的田請勿踩踏
+        </span>
+      </li>
+
+      <li>
+        <b>✓</b>
+        <span>
+          開花後 <b>1</b> 小時內可踩果實，手腳要快
+        </span>
+      </li>
+
+      <li>
+        <b>✓</b>
+        <span>
+          花瓣不夠時，派 <b>1</b> 隻皮克敏種花就好
+        </span>
+      </li>
+
+      <li>
+        <b>✓</b>
+        <span>
+          此網站僅會顯示首株座標，如需完整路徑請洽沐沐
+        </span>
+      </li>
+
+    </ul>
+
+  </section>
+
+
+  <footer class="credit">
+
+    🌷 本頁面僅為沐的花田同好及群友分享交流使用，資料由沐親自更新 🌷
+    <br>
+
+    請愛惜花田，讓沐的種花熱情不滅🔥
+
+  </footer>
+
+</div>
+
+
+<script type="module">
+
+/* =========================================================
+   Firebase
+   ========================================================= */
+
+import {
+  initializeApp
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  collection,
+  doc,
+  onSnapshot,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
+
+
+/* =========================================================
+   Firebase 設定
+   ========================================================= */
+
+const firebaseConfig = {
+
+  apiKey:
+    "AIzaSyAjJEHEJsjxb1xAUTeL1dHOlm7HBZmoIeQ",
+
+  authDomain:
+    "mumu-cbee1.firebaseapp.com",
+
+  projectId:
+    "mumu-cbee1",
+
+  storageBucket:
+    "mumu-cbee1.firebasestorage.app",
+
+  messagingSenderId:
+    "863518921915",
+
+  appId:
+    "1:863518921915:web:b9877c7cca9d6465ce859e",
+
+  measurementId:
+    "G-5P20CGEQDJ"
+
+};
+
+
+/* =========================================================
+   ★★★ 請把這裡改成你的管理員 Email ★★★
+   ========================================================= */
+
+const ADMIN_EMAIL =
+  "你的管理員Email@example.com";
+
+
+/* =========================================================
+   初始化 Firebase
+   ========================================================= */
+
+const app =
+  initializeApp(firebaseConfig);
+
+const auth =
+  getAuth(app);
+
+const db =
+  getFirestore(app);
+
+
+/* =========================================================
+   花田固定資料
+   注意：
+   這裡只放不常變動的資料。
+
+   倒數時間不再放這裡。
+   倒數會從 Firestore 取得。
+   ========================================================= */
+
+const flowers = [
+
+  {
+    id:"mu01",
+
+    name:"沐田01",
+
+    region:"印度",
+
+    coord:"20.956570,79.459720",
+
+    notes:[
+      "隨意花收",
+      "花苗花苞勿踩🌱",
+      "僅供群內使用勿轉發！！"
+    ],
+
+    cooldownStart:null,
+
+    cooldownUntil:null
+  },
+
+  {
+    id:"mu02",
+
+    name:"沐田02",
+
+    region:"克羅埃西亞",
+
+    coord:"45.493382,16.369886",
+
+    notes:[
+      "隨意花收",
+      "花苗花苞勿踩🌱",
+      "僅供群內使用勿轉發！！"
+    ],
+
+    cooldownStart:null,
+
+    cooldownUntil:null
+  }
+
+];
+
+
+/* =========================================================
+   設定
+   ========================================================= */
+
+const REGIONS = {
+
+  "全部":{
+    dot:
+      "linear-gradient(135deg,#FF9A3C,#5FC1DE,#B080E0)",
+
+    bg:"#3E9166"
+  },
+
+  "印度":{
+    dot:"#FF9A3C",
+
+    bg:"#E8813C"
+  },
+
+  "克羅埃西亞":{
+    dot:"#5FC1DE",
+
+    bg:"#3AA0C0"
+  },
+
+  "比利時":{
+    dot:"#B080E0",
+
+    bg:"#8E5BC7"
+  }
+
+};
+
+
+const COOLDOWN_PRESETS = [
+
+  {
+    label:"23hr",
+    minutes:23 * 60
+  },
+
+  {
+    label:"6hr",
+    minutes:6 * 60
+  },
+
+  {
+    label:"3hr",
+    minutes:3 * 60
+  }
+
+];
+
+
+const HARVEST_WINDOW_MS =
+  60 * 60 * 1000;
+
+
+let isAdmin = false;
+
+let activeRegion = "全部";
+
+let unsubscribeFlowers = null;
+
+
+/* =========================================================
+   DOM
+   ========================================================= */
+
+const grid =
+  document.getElementById("grid");
+
+const filterBar =
+  document.getElementById("filterBar");
+
+const adminPill =
+  document.getElementById("adminPill");
+
+const adminStatusText =
+  document.getElementById("adminStatusText");
+
+const adminBtn =
+  document.getElementById("adminBtn");
+
+const modalRoot =
+  document.getElementById("modalRoot");
+
+const syncPill =
+  document.getElementById("syncPill");
+
+const syncStatus =
+  document.getElementById("syncStatus");
+
+const firebaseError =
+  document.getElementById("firebaseError");
+
+const updateTime =
+  document.getElementById("updateTime");
+
+
+/* =========================================================
+   工具：顯示錯誤
+   ========================================================= */
+
+function showFirebaseError(message){
+
+  firebaseError.textContent =
+    message;
+
+  firebaseError.classList.add("show");
+}
+
+
+/* =========================================================
+   工具：清除錯誤
+   ========================================================= */
+
+function hideFirebaseError(){
+
+  firebaseError.textContent = "";
+
+  firebaseError.classList.remove("show");
+}
+
+
+/* =========================================================
+   更新同步狀態
+   ========================================================= */
+
+function setSyncStatus(
+  text,
+  offline = false
+){
+
+  syncStatus.textContent =
+    text;
+
+  if(offline){
+
+    syncPill.classList.add(
+      "offline"
+    );
+
+  }else{
+
+    syncPill.classList.remove(
+      "offline"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   更新時間
+   ========================================================= */
+
+function updateRefreshTime(){
+
+  const now =
+    new Date();
+
+  const hh =
+    String(
+      now.getHours()
+    ).padStart(2,"0");
+
+  const mm =
+    String(
+      now.getMinutes()
+    ).padStart(2,"0");
+
+  updateTime.textContent =
+    `更新於 今天 ${hh}:${mm}`;
+
+}
+
+
+/* =========================================================
+   地區按鈕
+   ========================================================= */
+
+function renderChips(){
+
+  filterBar.innerHTML = "";
+
+  Object.keys(REGIONS).forEach(
+    region => {
+
+      const btn =
+        document.createElement(
+          "button"
+        );
+
+      btn.className =
+        "chip" +
+        (
+          region === activeRegion
+            ? " active"
+            : ""
+        );
+
+      btn.type =
+        "button";
+
+      btn.innerHTML = `
+        <span
+          class="dot"
+          style="background:${REGIONS[region].dot}"
+        ></span>
+
+        ${region}
+      `;
+
+      btn.addEventListener(
+        "click",
+        () => {
+
+          activeRegion =
+            region;
+
+          renderChips();
+
+          renderCards();
+
+        }
+      );
+
+      filterBar.appendChild(btn);
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   倒數格式
+   ========================================================= */
+
+function formatRemain(ms){
+
+  const totalSec =
+    Math.max(
+      0,
+      Math.floor(ms / 1000)
+    );
+
+  const h =
+    Math.floor(
+      totalSec / 3600
+    );
+
+  const m =
+    Math.floor(
+      (totalSec % 3600) / 60
+    );
+
+  const s =
+    totalSec % 60;
+
+  const pad =
+    n =>
+      String(n).padStart(
+        2,
+        "0"
+      );
+
+  if(h > 0){
+
+    return `${h}:${pad(m)}:${pad(s)}`;
+
+  }
+
+  return `${pad(m)}:${pad(s)}`;
+
+}
+
+
+/* =========================================================
+   Firebase Authentication
+   ========================================================= */
+
+onAuthStateChanged(
+  auth,
+  user => {
+
+    if(user){
+
+      const email =
+        (
+          user.email ||
+          ""
+        ).toLowerCase();
+
+      const adminEmail =
+        ADMIN_EMAIL
+          .trim()
+          .toLowerCase();
+
+      if(
+        email === adminEmail
+      ){
+
+        isAdmin = true;
+
+        refreshAdminPill();
+
+        renderCards();
+
+        hideFirebaseError();
+
+      }else{
+
+        /*
+         * 有登入，但不是指定管理員。
+         * 自動登出。
+         */
+
+        isAdmin = false;
+
+        refreshAdminPill();
+
+        signOut(auth);
+
+        showFirebaseError(
+          "這個帳號不是花田管理員帳號 🌱"
+        );
+
+      }
+
+    }else{
+
+      isAdmin = false;
+
+      refreshAdminPill();
+
+      renderCards();
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   管理員狀態 UI
+   ========================================================= */
+
+function refreshAdminPill(){
+
+  if(isAdmin){
+
+    adminPill.classList.add(
+      "is-admin"
+    );
+
+    adminStatusText.textContent =
+      "🔓 管理員模式";
+
+    adminBtn.textContent =
+      "登出";
+
+  }else{
+
+    adminPill.classList.remove(
+      "is-admin"
+    );
+
+    adminStatusText.textContent =
+      "🔒 訪客模式";
+
+    adminBtn.textContent =
+      "管理員登入";
+
+  }
+
+}
+
+
+/* =========================================================
+   登入視窗
+   ========================================================= */
+
+function openLoginModal(){
+
+  modalRoot.innerHTML = `
+
+    <div
+      class="modal-overlay"
+      id="modalOverlay"
+    >
+
+      <div class="modal-box">
+
+        <h3>
+          🔐 管理員登入
+        </h3>
+
+        <p>
+          使用 Firebase 管理員帳號登入<br>
+          登入後才能操作花田倒數
+        </p>
+
+        <input
+          type="email"
+          id="emailInput"
+          placeholder="管理員 Email"
+          autocomplete="username"
+        />
+
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="密碼"
+          autocomplete="current-password"
+        />
+
+        <div
+          class="modal-error"
+          id="loginError"
+        ></div>
+
+        <div class="modal-actions">
+
+          <button
+            class="cancel"
+            id="loginCancel"
+            type="button"
+          >
+            取消
+          </button>
+
+          <button
+            class="confirm"
+            id="loginConfirm"
+            type="button"
+          >
+            登入
+          </button>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  `;
+
+
+  const emailInput =
+    document.getElementById(
+      "emailInput"
+    );
+
+  const passwordInput =
+    document.getElementById(
+      "passwordInput"
+    );
+
+  const loginError =
+    document.getElementById(
+      "loginError"
+    );
+
+  const overlay =
+    document.getElementById(
+      "modalOverlay"
+    );
+
+
+  emailInput.focus();
+
+
+  document
+    .getElementById("loginCancel")
+    .addEventListener(
+      "click",
+      closeModal
+    );
+
+
+  overlay.addEventListener(
+    "click",
+    event => {
+
+      if(
+        event.target === overlay
+      ){
+
+        closeModal();
+
+      }
+
+    }
+  );
+
+
+  async function tryLogin(){
+
+    const email =
+      emailInput.value.trim();
+
+    const password =
+      passwordInput.value;
+
+
+    if(!email || !password){
+
+      loginError.textContent =
+        "請輸入 Email 和密碼 🌱";
+
+      return;
+
+    }
+
+
+    loginError.textContent =
+      "登入中…";
+
+
+    try{
+
+      const result =
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
+
+
+      const loggedEmail =
+        (
+          result.user.email ||
+          ""
+        ).toLowerCase();
+
+      const adminEmail =
+        ADMIN_EMAIL
+          .trim()
+          .toLowerCase();
+
+
+      if(
+        loggedEmail !== adminEmail
+      ){
+
+        await signOut(auth);
+
+        loginError.textContent =
+          "這個帳號不是管理員帳號。";
+
+        return;
+
+      }
+
+
+      closeModal();
+
+      hideFirebaseError();
+
+    }catch(error){
+
+      console.error(
+        "Firebase 登入錯誤:",
+        error
+      );
+
+
+      let message =
+        "登入失敗，請確認 Email 與密碼。";
+
+
+      if(
+        error.code ===
+        "auth/invalid-credential"
+      ){
+
+        message =
+          "Email 或密碼不正確 🌱";
+
+      }
+
+      else if(
+        error.code ===
+        "auth/user-not-found"
+      ){
+
+        message =
+          "找不到這個管理員帳號。";
+
+      }
+
+      else if(
+        error.code ===
+        "auth/wrong-password"
+      ){
+
+        message =
+          "密碼不正確。";
+
+      }
+
+      else if(
+        error.code ===
+        "auth/invalid-email"
+      ){
+
+        message =
+          "Email 格式不正確。";
+
+      }
+
+
+      loginError.textContent =
+        message;
+
+    }
+
+  }
+
+
+  document
+    .getElementById("loginConfirm")
+    .addEventListener(
+      "click",
+      tryLogin
+    );
+
+
+  passwordInput.addEventListener(
+    "keydown",
+    event => {
+
+      if(
+        event.key === "Enter"
+      ){
+
+        tryLogin();
+
+      }
+
+    }
+  );
+
+}
+
+
+function closeModal(){
+
+  modalRoot.innerHTML = "";
+
+}
+
+
+/* =========================================================
+   管理員登入／登出按鈕
+   ========================================================= */
+
+adminBtn.addEventListener(
+  "click",
+  async () => {
+
+    if(isAdmin){
+
+      try{
+
+        await signOut(auth);
+
+      }catch(error){
+
+        console.error(
+          error
+        );
+
+      }
+
+    }else{
+
+      openLoginModal();
+
+    }
+
+  }
+);
+
+
+/* =========================================================
+   Firestore：
+   即時監聽所有花田狀態
+   ========================================================= */
+
+function listenToFlowers(){
+
+  setSyncStatus(
+    "☁️ 正在同步花田資料…"
+  );
+
+
+  const flowersRef =
+    collection(
+      db,
+      "flowers"
+    );
+
+
+  unsubscribeFlowers =
+    onSnapshot(
+
+      flowersRef,
+
+      snapshot => {
+
+        hideFirebaseError();
+
+        setSyncStatus(
+          "☁️ 花田資料已同步"
+        );
+
+
+        /*
+         * Firebase 裡每一份文件的 ID
+         * 對應 flowers 裡的 id。
+         */
+
+        snapshot.forEach(
+          docSnapshot => {
+
+            const data =
+              docSnapshot.data();
+
+            const flower =
+              flowers.find(
+                f =>
+                  f.id ===
+                  docSnapshot.id
+              );
+
+
+            if(!flower){
+              return;
+            }
+
+
+            flower.cooldownStart =
+              typeof data.cooldownStart === "number"
+                ? data.cooldownStart
+                : null;
+
+
+            flower.cooldownUntil =
+              typeof data.cooldownUntil === "number"
+                ? data.cooldownUntil
+                : null;
+
+          }
+        );
+
+
+        /*
+         * 如果 Firebase 中沒有某個花田，
+         * 就視為沒有倒數。
+         */
+
+        flowers.forEach(
+          flower => {
+
+            const found =
+              snapshot.docs.some(
+                d =>
+                  d.id ===
+                  flower.id
+              );
+
+            if(!found){
+
+              flower.cooldownStart =
+                null;
+
+              flower.cooldownUntil =
+                null;
+
+            }
+
+          }
+        );
+
+
+        updateRefreshTime();
+
+        renderCards();
+
+      },
+
+      error => {
+
+        console.error(
+          "Firestore 同步錯誤:",
+          error
+        );
+
+
+        setSyncStatus(
+          "⚠️ 無法同步花田資料",
+          true
+        );
+
+
+        showFirebaseError(
+          "目前無法讀取 Firestore 花田資料。請確認 Firestore Rules 是否已設定。"
+        );
+
+        renderCards();
+
+      }
+
+    );
+
+}
+
+
+/* =========================================================
+   開始倒數
+   ========================================================= */
+
+async function startCooldown(
+  id,
+  minutes
+){
+
+  if(!isAdmin){
+
+    return;
+
+  }
+
+
+  const flower =
+    flowers.find(
+      x =>
+        x.id === id
+    );
+
+
+  if(!flower){
+
+    return;
+
+  }
+
+
+  const start =
+    Date.now();
+
+  const until =
+    start +
+    minutes *
+    60 *
+    1000;
+
+
+  try{
+
+    setSyncStatus(
+      "☁️ 正在更新花田…"
+    );
+
+
+    await setDoc(
+
+      doc(
+        db,
+        "flowers",
+        id
+      ),
+
+      {
+
+        cooldownStart:
+          start,
+
+        cooldownUntil:
+          until,
+
+        updatedAt:
+          Date.now(),
+
+        updatedBy:
+          auth.currentUser
+            ?.email ||
+          ""
+
+      },
+
+      {
+        merge:true
+      }
+
+    );
+
+
+    setSyncStatus(
+      "☁️ 花田資料已同步"
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "開始倒數失敗:",
+      error
+    );
+
+
+    setSyncStatus(
+      "⚠️ 更新失敗",
+      true
+    );
+
+
+    showFirebaseError(
+      "倒數更新失敗，請確認你已登入管理員帳號，以及 Firestore Rules 是否正確。"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   取消倒數
+   ========================================================= */
+
+async function clearCooldown(
+  id
+){
+
+  if(!isAdmin){
+
+    return;
+
+  }
+
+
+  try{
+
+    setSyncStatus(
+      "☁️ 正在取消倒數…"
+    );
+
+
+    await setDoc(
+
+      doc(
+        db,
+        "flowers",
+        id
+      ),
+
+      {
+
+        cooldownStart:
+          null,
+
+        cooldownUntil:
+          null,
+
+        updatedAt:
+          Date.now(),
+
+        updatedBy:
+          auth.currentUser
+            ?.email ||
+          ""
+
+      },
+
+      {
+        merge:true
+      }
+
+    );
+
+
+    setSyncStatus(
+      "☁️ 花田資料已同步"
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "取消倒數失敗:",
+      error
+    );
+
+
+    setSyncStatus(
+      "⚠️ 更新失敗",
+      true
+    );
+
+
+    showFirebaseError(
+      "取消倒數失敗，請確認 Firestore Rules。"
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   Render Cards
+   ========================================================= */
+
+function renderCards(){
+
+  grid.innerHTML = "";
+
+
+  const list =
+    activeRegion === "全部"
+
+      ? flowers
+
+      : flowers.filter(
+          f =>
+            f.region ===
+            activeRegion
+        );
+
+
+  if(list.length === 0){
+
+    grid.innerHTML = `
+
+      <div class="empty">
+
+        <span class="emoji">
+          🌱
+        </span>
+
+        目前沒有符合條件的開花公告，
+        換個地區看看吧。
+
+      </div>
+
+    `;
+
+    return;
+
+  }
+
+
+  list.forEach(
+    (flower,index) => {
+
+      const card =
+        document.createElement(
+          "div"
+        );
+
+
+      card.className =
+        "card";
+
+
+      card.dataset.cardFor =
+        flower.id;
+
+
+      card.style.animationDelay =
+        (index * 0.06) +
+        "s";
+
+
+      const cooldownBtns =
+        COOLDOWN_PRESETS
+          .map(
+            preset => `
+
+              <button
+                class="cd-btn"
+                data-action="start"
+                data-id="${flower.id}"
+                data-min="${preset.minutes}"
+                type="button"
+              >
+                ⏳ ${preset.label}
+              </button>
+
+            `
+          )
+          .join("")
+
+        +
+
+        `
+
+          <button
+            class="cd-btn reset"
+            data-action="clear"
+            data-id="${flower.id}"
+            type="button"
+          >
+            ❄️ 取消倒數
+          </button>
+
+        `;
+
+
+      const controlsHtml =
+        isAdmin
+
+          ? `
+
+              <div class="cooldown-btns">
+
+                ${cooldownBtns}
+
+              </div>
+
+            `
+
+          : `
+
+              <div class="locked-hint">
+
+                🔒 僅管理員可操作倒數，
+                訪客只能查看狀態
+
+              </div>
+
+            `;
+
+
+      const regionInfo =
+        REGIONS[flower.region] ||
+        {
+          bg:"#3E9166"
+        };
+
+
+      card.innerHTML = `
+
+        <div class="card-top">
+
+          <div class="card-loc">
+
+            📍 ${flower.name}
+
+          </div>
+
+          <span
+            class="color-badge"
+            style="background:${regionInfo.bg}"
+          >
+
+            ${flower.region}
+
+          </span>
+
+        </div>
+
+
+        <div
+          class="status-row loading"
+          data-status-for="${flower.id}"
+        >
+
+          <span class="status-dot"></span>
+
+          <span class="status-text">
+            載入中…
+          </span>
+
+          <span class="countdown-time"></span>
+
+        </div>
+
+
+        <div class="coord-box">
+
+          <code>
+            ${flower.coord}
+          </code>
+
+          <button
+            class="copy-btn"
+            type="button"
+          >
+            複製座標
+          </button>
+
+        </div>
+
+
+        <div class="note">
+
+          ${flower.notes
+            .map(
+              note =>
+                `<div>💬 ${note}</div>`
+            )
+            .join("")}
+
+        </div>
+
+
+        ${controlsHtml}
+
+      `;
+
+
+      const copyBtn =
+        card.querySelector(
+          ".copy-btn"
+        );
+
+
+      copyBtn.addEventListener(
+        "click",
+        () =>
+          copyCoord(
+            flower.coord,
+            copyBtn
+          )
+      );
+
+
+      card
+        .querySelectorAll(
+          '[data-action="start"]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              "click",
+              () => {
+
+                startCooldown(
+                  button.dataset.id,
+                  Number(
+                    button.dataset.min
+                  )
+                );
+
+              }
+            );
+
+          }
+        );
+
+
+      card
+        .querySelectorAll(
+          '[data-action="clear"]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              "click",
+              () => {
+
+                clearCooldown(
+                  button.dataset.id
+                );
+
+              }
+            );
+
+          }
+        );
+
+
+      grid.appendChild(card);
+
+    }
+  );
+
+
+  updateAllCountdowns();
+
+}
+
+
+/* =========================================================
+   更新所有倒數
+   ========================================================= */
+
+function updateAllCountdowns(){
+
+  const now =
+    Date.now();
+
+
+  flowers.forEach(
+    flower => {
+
+      const row =
+        document.querySelector(
+          `[data-status-for="${flower.id}"]`
+        );
+
+
+      const card =
+        document.querySelector(
+          `[data-card-for="${flower.id}"]`
+        );
+
+
+      if(!row){
+
+        return;
+
+      }
+
+
+      const textEl =
+        row.querySelector(
+          ".status-text"
+        );
+
+
+      const timeEl =
+        row.querySelector(
+          ".countdown-time"
+        );
+
+
+      /*
+       * 沒有倒數
+       */
+
+      if(
+        !flower.cooldownUntil
+      ){
+
+        row.className =
+          "status-row";
+
+        textEl.textContent =
+          "空閒待命，可以前往收成";
+
+        timeEl.textContent =
+          "";
+
+        if(card){
+
+          card.classList.remove(
+            "harvest-glow"
+          );
+
+        }
+
+        return;
+
+      }
+
+
+      /*
+       * 倒數已經結束
+       */
+
+      if(
+        flower.cooldownUntil <=
+        now
+      ){
+
+        row.className =
+          "status-row";
+
+        textEl.textContent =
+          "空閒待命，可以前往收成";
+
+        timeEl.textContent =
+          "";
+
+        if(card){
+
+          card.classList.remove(
+            "harvest-glow"
+          );
+
+        }
+
+        /*
+         * 注意：
+         * 這裡不會直接修改 Firestore。
+         *
+         * 到時間後每個瀏覽器都會自己顯示
+         * 「空閒待命」。
+         *
+         * 下一次管理員按新的倒數時，
+         * 才會重新寫入 Firestore。
+         */
+
+        return;
+
+      }
+
+
+      const harvestStart =
+        flower.cooldownStart;
+
+
+      const harvestEndsAt =
+        Math.min(
+          harvestStart +
+            HARVEST_WINDOW_MS,
+
+          flower.cooldownUntil
+        );
+
+
+      const inHarvestWindow =
+        now <
+        harvestEndsAt;
+
+
+      if(inHarvestWindow){
+
+        row.className =
+          "status-row harvest";
+
+        textEl.textContent =
+          "🍒 可取得果實";
+
+        timeEl.textContent =
+          formatRemain(
+            harvestEndsAt -
+            now
+          );
+
+
+        if(card){
+
+          card.classList.add(
+            "harvest-glow"
+          );
+
+        }
+
+      }else{
+
+        row.className =
+          "status-row cooling";
+
+        textEl.textContent =
+          "冷卻中，暫無果實";
+
+        timeEl.textContent =
+          formatRemain(
+            flower.cooldownUntil -
+            now
+          );
+
+
+        if(card){
+
+          card.classList.remove(
+            "harvest-glow"
+          );
+
+        }
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   每秒更新畫面
+   ========================================================= */
+
+setInterval(
+  updateAllCountdowns,
+  1000
+);
+
+
+/* =========================================================
+   複製座標
+   ========================================================= */
+
+function copyCoord(
+  text,
+  btn
+){
+
+  const done =
+    () => {
+
+      const original =
+        "複製座標";
+
+
+      btn.textContent =
+        "已複製 🌱";
+
+
+      btn.classList.add(
+        "copied"
+      );
+
+
+      setTimeout(
+        () => {
+
+          btn.textContent =
+            original;
+
+          btn.classList.remove(
+            "copied"
+          );
+
+        },
+        1400
+      );
+
+    };
+
+
+  if(
+    navigator.clipboard &&
+    navigator.clipboard.writeText
+  ){
+
+    navigator.clipboard
+      .writeText(text)
+      .then(done)
+      .catch(
+        () =>
+          fallbackCopy(
+            text,
+            done
+          )
+      );
+
+  }else{
+
+    fallbackCopy(
+      text,
+      done
+    );
+
+  }
+
+}
+
+
+/* =========================================================
+   舊瀏覽器複製方式
+   ========================================================= */
+
+function fallbackCopy(
+  text,
+  callback
+){
+
+  const textarea =
+    document.createElement(
+      "textarea"
+    );
+
+
+  textarea.value =
+    text;
+
+
+  textarea.style.position =
+    "fixed";
+
+  textarea.style.opacity =
+    "0";
+
+
+  document.body.appendChild(
+    textarea
+  );
+
+
+  textarea.select();
+
+
+  try{
+
+    document.execCommand(
+      "copy"
+    );
+
+  }catch(error){
+
+    console.error(
+      error
+    );
+
+  }
+
+
+  document.body.removeChild(
+    textarea
+  );
+
+
+  callback();
+
+}
+
+
+/* =========================================================
+   重新整理按鈕
+   ========================================================= */
+
+document
+  .getElementById(
+    "refreshBtn"
+  )
+  .addEventListener(
+    "click",
+    () => {
+
+      updateRefreshTime();
+
+      /*
+       * 不重新設定 cooldown。
+       *
+       * 真正的狀態在 Firestore。
+       *
+       * 所以重新 render 也不會重置倒數。
+       */
+
+      renderCards();
+
+    }
+  );
+
+
+/* =========================================================
+   啟動
+   ========================================================= */
+
+refreshAdminPill();
+
+renderChips();
+
+renderCards();
+
+updateRefreshTime();
+
+listenToFlowers();
+
+</script>
+
+</body>
+</html>
