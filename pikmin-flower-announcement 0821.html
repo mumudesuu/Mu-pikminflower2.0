@@ -923,7 +923,7 @@
 
       const cooldownBtns = COOLDOWN_PRESETS.map(p =>
         `<button class="cd-btn" data-action="start" data-id="${f.id}" data-min="${p.minutes}" type="button">⏳ ${p.label}</button>`
-      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">🟢 標記空閒</button>`;
+      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">倒數重置</button>`;
 
       const controlsHtml = isAdmin
         ? `<div class="cooldown-btns">${cooldownBtns}</div>`
