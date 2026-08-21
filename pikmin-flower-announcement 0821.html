@@ -999,7 +999,7 @@
       } else {
         // 超過 1 小時：恢復原樣，冷卻中且無法取果實
         row.className = 'status-row cooling';
-        textEl.textContent = '❄️冷卻中，暫無果實';
+        textEl.textContent = '❄️花田冷卻中';
         timeEl.textContent = formatRemain(f.cooldownUntil - now);
         if(card) card.classList.remove('harvest-glow');
       }
