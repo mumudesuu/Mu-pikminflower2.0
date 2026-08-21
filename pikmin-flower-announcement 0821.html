@@ -828,6 +828,9 @@
         alert('操作失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
         return;
       }
+      if(data.warning){
+        alert('⚠️ ' + data.warning);
+      }
       await loadFields();
     } catch(err){
       alert('連線失敗，請檢查網路連線');
@@ -858,6 +861,44 @@
     } catch(err){
       alert('連線失敗，請檢查網路連線');
     }
+  }
+
+  // 儲存花種：跟開始倒數是分開的動作，管理員隨時都能編輯，
+  // 不管花田現在是空閒、可收成、還是冷卻中。
+  async function saveFlowerType(id){
+    if(!isAdmin) return;
+
+    const input = document.querySelector(`.ft-input[data-id="${id}"]`);
+    if(!input) return;
+    const value = input.value.trim();
+
+    if(!API_URL){
+      const f = flowers.find(x => x.id === id);
+      if(f) f.flowerType = value;
+      flashSaved(input);
+      return;
+    }
+
+    try{
+      const url = `${API_URL}?action=updateFlowerType&id=${encodeURIComponent(id)}&flowerType=${encodeURIComponent(value)}&idToken=${encodeURIComponent(idToken)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.ok){
+        alert('儲存失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
+        return;
+      }
+      const f = flowers.find(x => x.id === id);
+      if(f) f.flowerType = value;
+      flashSaved(input);
+    } catch(err){
+      alert('連線失敗，請檢查網路連線');
+    }
+  }
+
+  // 儲存成功時，輸入框邊框短暫變綠色再恢復，給個小小的視覺回饋
+  function flashSaved(input){
+    input.style.borderColor = 'var(--leaf)';
+    setTimeout(() => { input.style.borderColor = ''; }, 900);
   }
 
   /* ---------- 管理員登入（Google 帳號） ---------- */
@@ -1014,7 +1055,7 @@
 
       const cooldownBtns = COOLDOWN_PRESETS.map(p =>
         `<button class="cd-btn" data-action="start" data-id="${f.id}" data-min="${p.minutes}" type="button">⏳ ${p.label}</button>`
-      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">🟢 標記空閒</button>`;
+      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">❄️ 取消倒數</button>`;
 
       const controlsHtml = isAdmin
         ? `<div class="cooldown-btns">${cooldownBtns}</div>`
@@ -1032,11 +1073,10 @@
             class="ft-input"
             data-id="${f.id}"
             maxlength="30"
-            placeholder="${isAdmin ? '先填花種，再按下面倒數按鈕' : '尚未設定'}"
+            placeholder="${isAdmin ? '輸入花種，按 Enter 儲存' : '尚未設定'}"
             value="${escapeHtml(f.flowerType)}"
             ${isAdmin ? '' : 'disabled'}
           />
-          <span class="ft-hint" data-id="${f.id}">🔒 冷卻中／可收成中無法修改，恢復空閒待命後才能編輯</span>
         </div>
       `;
 
@@ -1072,11 +1112,12 @@
         btn.addEventListener('click', () => clearCooldown(btn.dataset.id));
       });
 
-      // 花種輸入框內按 Enter，直接視同按下第一個倒數選項（最常用的那個）
+      // 花種輸入框內按 Enter，直接儲存花種（跟開始倒數是分開的兩件事，
+      // 隨時都可以編輯，不管花田目前是空閒、可收成還是冷卻中）
       const ftInputEl = card.querySelector('.ft-input');
-      if(ftInputEl && isAdmin && COOLDOWN_PRESETS.length > 0){
+      if(ftInputEl && isAdmin){
         ftInputEl.addEventListener('keydown', (e) => {
-          if(e.key === 'Enter') startCooldown(f.id, COOLDOWN_PRESETS[0].minutes);
+          if(e.key === 'Enter') saveFlowerType(f.id);
         });
       }
 
@@ -1092,22 +1133,11 @@
     flowers.forEach(f => {
       const row = document.querySelector(`[data-status-for="${f.id}"]`);
       const card = document.querySelector(`[data-card-for="${f.id}"]`);
-      const ftInput = document.querySelector(`.ft-input[data-id="${f.id}"]`);
-      const ftHint = document.querySelector(`.ft-hint[data-id="${f.id}"]`);
 
       const phase = getFlowerPhase(f);
       if(lastPhaseById[f.id] !== phase){
         phaseChanged = true;
         lastPhaseById[f.id] = phase;
-      }
-
-      const idleNow = (phase === 'idle');
-      if(ftInput){
-        const canEdit = isAdmin && idleNow;
-        ftInput.disabled = !canEdit;
-        if(ftHint){
-          ftHint.style.display = (isAdmin && !idleNow) ? 'block' : 'none';
-        }
       }
 
       if(!row) return;
