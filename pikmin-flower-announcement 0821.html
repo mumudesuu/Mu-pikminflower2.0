@@ -279,6 +279,70 @@
     text-align:center;
   }
 
+  .seedling-row{
+    font-size:12.5px;
+    color: var(--leaf-deep);
+    background: #EFF7F1;
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-bottom: 8px;
+    font-weight:700;
+  }
+
+  .flowertype-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    margin-bottom: 8px;
+    flex-wrap:wrap;
+  }
+  .ft-label{
+    font-size:12.5px;
+    font-weight:700;
+    color: var(--pink-deep);
+    flex-shrink:0;
+  }
+  .ft-input{
+    flex:1;
+    min-width:80px;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-size:13px;
+    padding: 6px 10px;
+    border-radius: 10px;
+    border: 2px solid #F3D3DE;
+    outline:none;
+    color: var(--ink);
+    background:#FFF7FA;
+    transition: border-color .15s ease, background .15s ease;
+  }
+  .ft-input:focus{ border-color: var(--pink);}
+  .ft-input:disabled{
+    background:#F5F3EE;
+    border-color:#E5E0D6;
+    color:#8A806E;
+    cursor:not-allowed;
+  }
+  .ft-save-btn{
+    flex-shrink:0;
+    border:none;
+    background: var(--pink);
+    color:#fff;
+    font-weight:800;
+    font-size:12px;
+    padding: 7px 10px;
+    border-radius: 10px;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .ft-save-btn:hover{ background: var(--pink-deep); transform: translateY(-1px);}
+  .ft-save-btn:active{ transform: translateY(1px) scale(.95);}
+  .ft-hint{
+    width:100%;
+    font-size:11px;
+    color:#B9820A;
+    display:none;
+  }
+
   .backend-hint{
     margin-top:8px;
     font-size:11.5px;
@@ -602,7 +666,7 @@
     <h2>🧺 收成小提醒</h2>
     <ul>
       <li><b>✗</b><span>未經同意請勿轉傳座標，也不要偷田</span></li>
-      <li><b>✗</b><span>沒有倒數的花田請不要亂踩，會影響賭徒沐沐，導致血本無歸(慘><)</span></li>
+      <li><b>✗</b><span>沒有倒數的花田請不要亂踩，會影響賭徒沐沐，導致血本無歸((慘><)</span></li>
       <li><b>✓</b><span>開花後 <b>1</b> 小時內果實最多，手腳要快</span></li>
       <li><b>✓</b><span>花瓣不夠時，可以派 <b>1</b> 隻皮克敏去種花就好，花瓣要省著點用~</span></li>
       <li><b>✓</b><span>此網站僅會顯示首株座標，如需完整路徑請洽沐沐</span></li>
@@ -655,7 +719,9 @@
       coord: "20.956570,79.459720",
       notes: "隨意花收|花苗花苞勿踩🌱|僅供群內使用勿轉發！！",
       cooldownStart: "",
-      cooldownUntil: ""
+      cooldownUntil: "",
+      seedlingCount: 12,
+      flowerType: ""
     },
   ];
 
@@ -675,6 +741,15 @@
   const filterBar = document.getElementById('filterBar');
   let activeRegion = "全部";
 
+  function escapeHtml(str){
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function normalizeField(raw){
     return {
       id: raw.id,
@@ -686,10 +761,18 @@
         : (Array.isArray(raw.notes) ? raw.notes : []),
       cooldownStart: raw.cooldownStart ? Number(raw.cooldownStart) : null,
       cooldownUntil: raw.cooldownUntil ? Number(raw.cooldownUntil) : null,
+      seedlingCount: (raw.seedlingCount !== undefined && raw.seedlingCount !== '' && raw.seedlingCount !== null)
+        ? raw.seedlingCount : null,
+      flowerType: raw.flowerType || '',
     };
   }
 
-  async function loadFields(showSpinnerText){
+  async function loadFields(){
+    // 有人正在編輯花種輸入框時，先不要因為輪詢同步而打斷他打字
+    if(document.activeElement && document.activeElement.classList &&
+       document.activeElement.classList.contains('ft-input')){
+      return;
+    }
     if(!API_URL){
       flowers = FALLBACK_FIELDS.map(normalizeField);
       renderCards();
@@ -779,6 +862,43 @@
       const data = await res.json();
       if(!data.ok){
         alert('操作失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
+        return;
+      }
+      await loadFields();
+    } catch(err){
+      alert('連線失敗，請檢查網路連線');
+    }
+  }
+
+  function isFieldIdle(f){
+    return !f.cooldownUntil || f.cooldownUntil <= Date.now();
+  }
+
+  async function saveFlowerType(id){
+    if(!isAdmin) return;
+
+    const input = document.querySelector(`.ft-input[data-id="${id}"]`);
+    if(!input) return;
+    const value = input.value.trim();
+
+    const f = flowers.find(x => x.id === id);
+    if(f && !isFieldIdle(f)){
+      alert('這個花田正在冷卻中／可收成中，恢復空閒待命後才能修改花種喔 🌱');
+      return;
+    }
+
+    if(!API_URL){
+      if(f) f.flowerType = value;
+      renderCards();
+      return;
+    }
+
+    try{
+      const url = `${API_URL}?action=updateFlowerType&id=${encodeURIComponent(id)}&flowerType=${encodeURIComponent(value)}&idToken=${encodeURIComponent(idToken)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.ok){
+        alert('儲存失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
         return;
       }
       await loadFields();
@@ -906,9 +1026,27 @@
   refreshAdminPill();
   waitForGoogleAndInit();
 
+  // 判斷花田目前的階段：idle(空閒待命) / harvest(開花後1小時內可收成) / cooling(冷卻中無果實)
+  function getFlowerPhase(f){
+    if(!f.cooldownUntil || f.cooldownUntil <= Date.now()) return 'idle';
+    const harvestEndsAt = Math.min(f.cooldownStart + HARVEST_WINDOW_MS, f.cooldownUntil);
+    return (Date.now() < harvestEndsAt) ? 'harvest' : 'cooling';
+  }
+
+  let lastPhaseById = {};
+
   function renderCards(){
     grid.innerHTML = "";
-    const list = activeRegion === "全部" ? flowers : flowers.filter(f => f.region === activeRegion);
+    const filtered = activeRegion === "全部" ? flowers : flowers.filter(f => f.region === activeRegion);
+
+    // 可收成中（開花後 1 小時內）的花田固定排在最上面；
+    // 一旦超過 1 小時變成冷卻中，就會回到原本的排序位置。
+    // sort 是穩定排序，同一階段內的花田彼此順序不會被打亂。
+    const list = [...filtered].sort((a, b) => {
+      const aTop = getFlowerPhase(a) === 'harvest' ? 0 : 1;
+      const bTop = getFlowerPhase(b) === 'harvest' ? 0 : 1;
+      return aTop - bTop;
+    });
 
     if(list.length === 0){
       grid.innerHTML = `<div class="empty"><span class="emoji">🌱</span>目前沒有符合條件的開花公告，換個地區看看吧。</div>`;
@@ -923,28 +1061,51 @@
 
       const cooldownBtns = COOLDOWN_PRESETS.map(p =>
         `<button class="cd-btn" data-action="start" data-id="${f.id}" data-min="${p.minutes}" type="button">⏳ ${p.label}</button>`
-      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">倒數重置</button>`;
+      ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">🟢 標記空閒</button>`;
 
       const controlsHtml = isAdmin
         ? `<div class="cooldown-btns">${cooldownBtns}</div>`
-        : `<div class="locked-hint">🔒 僅管理員可操作倒數，訪客可查看狀態</div>`;
+        : `<div class="locked-hint">🔒 僅管理員可操作倒數，訪客只能查看狀態</div>`;
+
+      const seedlingHtml = (f.seedlingCount !== null && f.seedlingCount !== undefined && f.seedlingCount !== '')
+        ? `<div class="seedling-row">🌱 苗數：${escapeHtml(f.seedlingCount)} 株</div>`
+        : '';
+
+      const flowerTypeHtml = `
+        <div class="flowertype-row">
+          <span class="ft-label">🌼 花種</span>
+          <input
+            type="text"
+            class="ft-input"
+            data-id="${f.id}"
+            maxlength="30"
+            placeholder="${isAdmin ? '尚未設定花種，輸入後儲存' : '尚未設定'}"
+            value="${escapeHtml(f.flowerType)}"
+            ${isAdmin ? '' : 'disabled'}
+          />
+          ${isAdmin ? `<button class="ft-save-btn" data-id="${f.id}" type="button">💾 儲存</button>` : ''}
+          <span class="ft-hint" data-id="${f.id}">🔒 冷卻中／可收成中無法修改，恢復空閒待命後才能編輯</span>
+        </div>
+      `;
 
       card.innerHTML = `
         <div class="card-top">
-          <div class="card-loc">📍 ${f.name}</div>
-          <span class="color-badge" style="background:${REGIONS[f.region].bg}">${f.region}</span>
+          <div class="card-loc">📍 ${escapeHtml(f.name)}</div>
+          <span class="color-badge" style="background:${REGIONS[f.region].bg}">${escapeHtml(f.region)}</span>
         </div>
         <div class="status-row" data-status-for="${f.id}">
           <span class="status-dot"></span>
           <span class="status-text">—</span>
           <span class="countdown-time"></span>
         </div>
+        ${seedlingHtml}
+        ${flowerTypeHtml}
         <div class="coord-box">
-          <code>${f.coord}</code>
+          <code>${escapeHtml(f.coord)}</code>
           <button class="copy-btn" type="button">複製座標</button>
         </div>
         <div class="note">
-          ${f.notes.map(n => `<div>💬 ${n}</div>`).join("")}
+          ${f.notes.map(n => `<div>💬 ${escapeHtml(n)}</div>`).join("")}
         </div>
         ${controlsHtml}
       `;
@@ -959,6 +1120,17 @@
         btn.addEventListener('click', () => clearCooldown(btn.dataset.id));
       });
 
+      const ftSaveBtn = card.querySelector('.ft-save-btn');
+      if(ftSaveBtn){
+        ftSaveBtn.addEventListener('click', () => saveFlowerType(f.id));
+      }
+      const ftInputEl = card.querySelector('.ft-input');
+      if(ftInputEl && isAdmin){
+        ftInputEl.addEventListener('keydown', (e) => {
+          if(e.key === 'Enter') saveFlowerType(f.id);
+        });
+      }
+
       grid.appendChild(card);
     });
 
@@ -966,9 +1138,29 @@
   }
 
   function updateAllCountdowns(){
+    let phaseChanged = false;
+
     flowers.forEach(f => {
       const row = document.querySelector(`[data-status-for="${f.id}"]`);
       const card = document.querySelector(`[data-card-for="${f.id}"]`);
+      const ftInput = document.querySelector(`.ft-input[data-id="${f.id}"]`);
+      const ftHint = document.querySelector(`.ft-hint[data-id="${f.id}"]`);
+
+      const phase = getFlowerPhase(f);
+      if(lastPhaseById[f.id] !== phase){
+        phaseChanged = true;
+        lastPhaseById[f.id] = phase;
+      }
+
+      const idleNow = (phase === 'idle');
+      if(ftInput){
+        const canEdit = isAdmin && idleNow;
+        ftInput.disabled = !canEdit;
+        if(ftHint){
+          ftHint.style.display = (isAdmin && !idleNow) ? 'block' : 'none';
+        }
+      }
+
       if(!row) return;
       const textEl = row.querySelector('.status-text');
       const timeEl = row.querySelector('.countdown-time');
@@ -999,11 +1191,17 @@
       } else {
         // 超過 1 小時：恢復原樣，冷卻中且無法取果實
         row.className = 'status-row cooling';
-        textEl.textContent = '❄️花田冷卻中';
+        textEl.textContent = '冷卻中，暫無果實';
         timeEl.textContent = formatRemain(f.cooldownUntil - now);
         if(card) card.classList.remove('harvest-glow');
       }
     });
+
+    // 有花田剛好從「可收成」轉換到「冷卻中」（或反過來），
+    // 重新整理排序：可收成的花田置頂，其餘的花田回到原本順序。
+    if(phaseChanged){
+      renderCards();
+    }
   }
 
   setInterval(updateAllCountdowns, 1000);
