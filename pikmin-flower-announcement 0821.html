@@ -322,20 +322,6 @@
     color:#8A806E;
     cursor:not-allowed;
   }
-  .ft-save-btn{
-    flex-shrink:0;
-    border:none;
-    background: var(--pink);
-    color:#fff;
-    font-weight:800;
-    font-size:12px;
-    padding: 7px 10px;
-    border-radius: 10px;
-    cursor:pointer;
-    transition: transform .15s ease, background .15s ease;
-  }
-  .ft-save-btn:hover{ background: var(--pink-deep); transform: translateY(-1px);}
-  .ft-save-btn:active{ transform: translateY(1px) scale(.95);}
   .ft-hint{
     width:100%;
     font-size:11px;
@@ -821,17 +807,21 @@
   async function startCooldown(id, minutes){
     if(!isAdmin) return;
 
+    const ftInput = document.querySelector(`.ft-input[data-id="${id}"]`);
+    const flowerTypeValue = ftInput ? ftInput.value.trim() : '';
+
     if(!API_URL){
       const f = flowers.find(x => x.id === id);
       if(!f) return;
       f.cooldownStart = Date.now();
       f.cooldownUntil = f.cooldownStart + minutes * 60 * 1000;
+      if(flowerTypeValue) f.flowerType = flowerTypeValue;
       renderCards();
       return;
     }
 
     try{
-      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&idToken=${encodeURIComponent(idToken)}`;
+      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&flowerType=${encodeURIComponent(flowerTypeValue)}&idToken=${encodeURIComponent(idToken)}`;
       const res = await fetch(url);
       const data = await res.json();
       if(!data.ok){
@@ -862,43 +852,6 @@
       const data = await res.json();
       if(!data.ok){
         alert('操作失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
-        return;
-      }
-      await loadFields();
-    } catch(err){
-      alert('連線失敗，請檢查網路連線');
-    }
-  }
-
-  function isFieldIdle(f){
-    return !f.cooldownUntil || f.cooldownUntil <= Date.now();
-  }
-
-  async function saveFlowerType(id){
-    if(!isAdmin) return;
-
-    const input = document.querySelector(`.ft-input[data-id="${id}"]`);
-    if(!input) return;
-    const value = input.value.trim();
-
-    const f = flowers.find(x => x.id === id);
-    if(f && !isFieldIdle(f)){
-      alert('這個花田正在冷卻中／可收成中，恢復空閒待命後才能修改花種喔 🌱');
-      return;
-    }
-
-    if(!API_URL){
-      if(f) f.flowerType = value;
-      renderCards();
-      return;
-    }
-
-    try{
-      const url = `${API_URL}?action=updateFlowerType&id=${encodeURIComponent(id)}&flowerType=${encodeURIComponent(value)}&idToken=${encodeURIComponent(idToken)}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if(!data.ok){
-        alert('儲存失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
         return;
       }
       await loadFields();
@@ -1079,11 +1032,10 @@
             class="ft-input"
             data-id="${f.id}"
             maxlength="30"
-            placeholder="${isAdmin ? '尚未設定花種，輸入後儲存' : '尚未設定'}"
+            placeholder="${isAdmin ? '先填花種，再按下面倒數按鈕' : '尚未設定'}"
             value="${escapeHtml(f.flowerType)}"
             ${isAdmin ? '' : 'disabled'}
           />
-          ${isAdmin ? `<button class="ft-save-btn" data-id="${f.id}" type="button">💾 儲存</button>` : ''}
           <span class="ft-hint" data-id="${f.id}">🔒 冷卻中／可收成中無法修改，恢復空閒待命後才能編輯</span>
         </div>
       `;
@@ -1120,14 +1072,11 @@
         btn.addEventListener('click', () => clearCooldown(btn.dataset.id));
       });
 
-      const ftSaveBtn = card.querySelector('.ft-save-btn');
-      if(ftSaveBtn){
-        ftSaveBtn.addEventListener('click', () => saveFlowerType(f.id));
-      }
+      // 花種輸入框內按 Enter，直接視同按下第一個倒數選項（最常用的那個）
       const ftInputEl = card.querySelector('.ft-input');
-      if(ftInputEl && isAdmin){
+      if(ftInputEl && isAdmin && COOLDOWN_PRESETS.length > 0){
         ftInputEl.addEventListener('keydown', (e) => {
-          if(e.key === 'Enter') saveFlowerType(f.id);
+          if(e.key === 'Enter') startCooldown(f.id, COOLDOWN_PRESETS[0].minutes);
         });
       }
 
@@ -1172,7 +1121,7 @@
           f.cooldownStart = null;
         }
         row.className = 'status-row';
-        textEl.textContent = '空閒待命，可以前往收成';
+        textEl.textContent = '❄️花田冷卻中';
         timeEl.textContent = '';
         if(card) card.classList.remove('harvest-glow');
         return;
@@ -1199,8 +1148,29 @@
 
     // 有花田剛好從「可收成」轉換到「冷卻中」（或反過來），
     // 重新整理排序：可收成的花田置頂，其餘的花田回到原本順序。
+    // 順便保留使用者「正在輸入中」的花種文字，避免打字打到一半被重繪清掉。
     if(phaseChanged){
+      const active = document.activeElement;
+      let preserved = null;
+      if(active && active.classList && active.classList.contains('ft-input')){
+        preserved = {
+          id: active.dataset.id,
+          value: active.value,
+          selStart: active.selectionStart,
+          selEnd: active.selectionEnd
+        };
+      }
+
       renderCards();
+
+      if(preserved){
+        const el = document.querySelector(`.ft-input[data-id="${preserved.id}"]`);
+        if(el && !el.disabled){
+          el.value = preserved.value;
+          el.focus();
+          try{ el.setSelectionRange(preserved.selStart, preserved.selEnd); }catch(e){}
+        }
+      }
     }
   }
 
