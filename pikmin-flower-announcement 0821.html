@@ -477,6 +477,25 @@
   .copy-btn:active{ transform: translateY(1px) scale(.95);}
   .copy-btn.copied{ background: var(--leaf); color:#fff;}
 
+  .share-btn{
+    display:block;
+    width:100%;
+    border:none;
+    background: linear-gradient(135deg, var(--sky), var(--purple));
+    color:#fff;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:800;
+    font-size:13px;
+    padding: 9px 12px;
+    border-radius: 12px;
+    cursor:pointer;
+    margin-bottom: 10px;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .share-btn:hover{ filter:brightness(1.06); transform: translateY(-1px);}
+  .share-btn:active{ transform: translateY(1px) scale(.98);}
+  .share-btn.copied{ background: var(--leaf); }
+
   .note{
     font-size:12.5px;
     color:#8A7A5E;
@@ -1096,6 +1115,7 @@
           <code>${escapeHtml(f.coord)}</code>
           <button class="copy-btn" type="button">複製座標</button>
         </div>
+        <button class="share-btn" type="button">📤 複製收成資訊分享朋友</button>
         <div class="note">
           ${f.notes.map(n => `<div>💬 ${escapeHtml(n)}</div>`).join("")}
         </div>
@@ -1104,6 +1124,9 @@
 
       const copyBtn = card.querySelector('.copy-btn');
       copyBtn.addEventListener('click', () => copyCoord(f.coord, copyBtn));
+
+      const shareBtn = card.querySelector('.share-btn');
+      shareBtn.addEventListener('click', () => shareFieldInfo(f, shareBtn));
 
       card.querySelectorAll('[data-action="start"]').forEach(btn => {
         btn.addEventListener('click', () => startCooldown(btn.dataset.id, Number(btn.dataset.min)));
@@ -1206,21 +1229,60 @@
 
   setInterval(updateAllCountdowns, 1000);
 
+  function copyToClipboard(text, onDone){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  }
+
   function copyCoord(text, btn){
-    const done = () => {
-      const original = "複製座標";
+    const original = "複製座標";
+    copyToClipboard(text, () => {
       btn.textContent = "已複製 🌱";
       btn.classList.add('copied');
       setTimeout(() => {
         btn.textContent = original;
         btn.classList.remove('copied');
       }, 1400);
-    };
-    if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+    });
+  }
+
+  // 組出分享用的文字內容，格式：
+  // 花田名稱 / 所在地 XX苗 / 開花花種 XX / 首株地點 座標 / 剩餘:X時 X分(整體冷卻時間)
+  function buildShareText(f){
+    const lines = [
+      f.name,
+      `所在地 ${f.region}苗`,
+      `開花花種 ${f.flowerType ? f.flowerType : '尚未設定'}`,
+      `首株地點 ${f.coord}`,
+    ];
+
+    const now = Date.now();
+    if(f.cooldownUntil && f.cooldownUntil > now){
+      const totalMin = Math.max(0, Math.floor((f.cooldownUntil - now) / 60000));
+      const h = Math.floor(totalMin / 60);
+      const m = totalMin % 60;
+      lines.push(`剩餘:${h}時 ${m}分(整體冷卻時間)`);
     } else {
-      fallbackCopy(text, done);
+      lines.push('剩餘:空閒待命中，隨時可前往');
     }
+
+    return lines.join('\n');
+  }
+
+  function shareFieldInfo(f, btn){
+    const original = btn.textContent;
+    const text = buildShareText(f);
+    copyToClipboard(text, () => {
+      btn.textContent = '已複製 ✅';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = original;
+        btn.classList.remove('copied');
+      }, 1600);
+    });
   }
 
   function fallbackCopy(text, cb){
