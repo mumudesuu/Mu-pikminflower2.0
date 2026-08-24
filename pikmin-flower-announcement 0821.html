@@ -306,20 +306,32 @@
     flex:1;
     min-width:80px;
     font-family:"Zen Maru Gothic",sans-serif;
-    font-size:13px;
-    padding: 6px 10px;
+    font-size:14px;
+    font-weight:800;
+    padding: 8px 12px;
     border-radius: 10px;
-    border: 2px solid #F3D3DE;
+    border: 2.5px solid var(--pink);
     outline:none;
-    color: var(--ink);
-    background:#FFF7FA;
-    transition: border-color .15s ease, background .15s ease;
+    color: var(--pink-deep);
+    background:#FFE1EC;
+    box-shadow: 0 2px 0 rgba(232,93,141,0.18);
+    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
   }
-  .ft-input:focus{ border-color: var(--pink);}
+  .ft-input::placeholder{
+    color:#E39CB6;
+    font-weight:600;
+  }
+  .ft-input:focus{
+    border-color: var(--pink-deep);
+    background:#FFD1E2;
+    box-shadow: 0 2px 0 rgba(232,93,141,0.3), 0 0 0 3px rgba(255,127,168,0.25);
+  }
   .ft-input:disabled{
     background:#F5F3EE;
     border-color:#E5E0D6;
     color:#8A806E;
+    box-shadow:none;
+    font-weight:600;
     cursor:not-allowed;
   }
   .ft-hint{
@@ -1115,7 +1127,7 @@
           <code>${escapeHtml(f.coord)}</code>
           <button class="copy-btn" type="button">複製座標</button>
         </div>
-        <button class="share-btn" type="button">📤 複製收成資訊分享朋友</button>
+        <button class="share-btn" type="button">📤 複製收成資訊</button>
         <div class="note">
           ${f.notes.map(n => `<div>💬 ${escapeHtml(n)}</div>`).join("")}
         </div>
@@ -1252,22 +1264,26 @@
   // 組出分享用的文字內容，格式：
   // 花田名稱 / 所在地 XX苗 / 開花花種 XX / 首株地點 座標 / 剩餘:X時 X分(整體冷卻時間)
   function buildShareText(f){
-    const lines = [
-      f.name,
-      `所在地 ${f.region}苗`,
-      `開花花種 ${f.flowerType ? f.flowerType : '尚未設定'}`,
-      `首株地點 ${f.coord}`,
-    ];
-
     const now = Date.now();
+    let remainText;
     if(f.cooldownUntil && f.cooldownUntil > now){
       const totalMin = Math.max(0, Math.floor((f.cooldownUntil - now) / 60000));
       const h = Math.floor(totalMin / 60);
       const m = totalMin % 60;
-      lines.push(`剩餘:${h}時 ${m}分(整體冷卻時間)`);
+      remainText = `${h}時 ${m}分`;
     } else {
-      lines.push('剩餘:空閒待命中，隨時可前往');
+      remainText = '空閒待命中，隨時可前往';
     }
+
+    const lines = [
+      `${f.name} in${f.region}`,
+      '',
+      `花種：${f.flowerType ? f.flowerType : '尚未設定'}`,
+      `地點：${f.coord}`,
+      `剩餘：${remainText}`,
+      '備註：',
+      ...f.notes.map(n => `💬 ${n}`),
+    ];
 
     return lines.join('\n');
   }
