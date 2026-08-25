@@ -310,21 +310,19 @@
     font-weight:800;
     padding: 8px 12px;
     border-radius: 10px;
-    border: 2.5px solid var(--pink);
+    border: 2px solid #F3D3DE;
     outline:none;
     color: var(--pink-deep);
-    background:#FFE1EC;
-    box-shadow: 0 2px 0 rgba(232,93,141,0.18);
-    transition: border-color .15s ease, background .15s ease, box-shadow .15s ease;
+    background:#FFF7FA;
+    transition: border-color .15s ease, background .15s ease;
   }
   .ft-input::placeholder{
-    color:#E39CB6;
-    font-weight:600;
+    color:#C9AEB7;
+    font-weight:500;
   }
   .ft-input:focus{
-    border-color: var(--pink-deep);
-    background:#FFD1E2;
-    box-shadow: 0 2px 0 rgba(232,93,141,0.3), 0 0 0 3px rgba(255,127,168,0.25);
+    border-color: var(--pink);
+    background:#FFF0F5;
   }
   .ft-input:disabled{
     background:#F5F3EE;
@@ -578,6 +576,40 @@
     color:#C1454D;
   }
   .cd-btn.reset:hover{ background:#FBDCDC;}
+
+  .custom-cooldown{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+    margin-bottom: 4px;
+    padding-top: 8px;
+    border-top: 1px dashed #E5DFD0;
+  }
+  .custom-label{
+    font-size:12px;
+    font-weight:700;
+    color: var(--sky);
+    flex-shrink:0;
+  }
+  .custom-hr, .custom-min{
+    width:50px;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-size:12.5px;
+    padding: 6px 8px;
+    border-radius: 10px;
+    border: 2px solid #D9E8EE;
+    outline:none;
+    color: var(--ink);
+    background:#F3FBFD;
+    text-align:center;
+  }
+  .custom-hr:focus, .custom-min:focus{ border-color: var(--sky);}
+  .cd-btn.custom-start{
+    background: #E4F3F8;
+    color:#2C7A93;
+  }
+  .cd-btn.custom-start:hover{ background:#D3ECF3;}
 
   .empty{
     text-align:center;
@@ -835,7 +867,7 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
   }
 
-  async function startCooldown(id, minutes){
+  async function startCooldown(id, minutes, skipHarvest){
     if(!isAdmin) return;
 
     const ftInput = document.querySelector(`.ft-input[data-id="${id}"]`);
@@ -844,15 +876,15 @@
     if(!API_URL){
       const f = flowers.find(x => x.id === id);
       if(!f) return;
-      f.cooldownStart = Date.now();
-      f.cooldownUntil = f.cooldownStart + minutes * 60 * 1000;
+      f.cooldownStart = Date.now() - (skipHarvest ? HARVEST_WINDOW_MS : 0);
+      f.cooldownUntil = Date.now() + minutes * 60 * 1000;
       if(flowerTypeValue) f.flowerType = flowerTypeValue;
       renderCards();
       return;
     }
 
     try{
-      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&flowerType=${encodeURIComponent(flowerTypeValue)}&idToken=${encodeURIComponent(idToken)}`;
+      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&skipHarvest=${skipHarvest ? 'true' : 'false'}&flowerType=${encodeURIComponent(flowerTypeValue)}&idToken=${encodeURIComponent(idToken)}`;
       const res = await fetch(url);
       const data = await res.json();
       if(!data.ok){
@@ -876,6 +908,7 @@
       if(!f) return;
       f.cooldownUntil = null;
       f.cooldownStart = null;
+      f.flowerType = ''; // 取消倒數時一併清空花種
       renderCards();
       return;
     }
@@ -1088,8 +1121,17 @@
         `<button class="cd-btn" data-action="start" data-id="${f.id}" data-min="${p.minutes}" type="button">⏳ ${p.label}</button>`
       ).join("") + `<button class="cd-btn reset" data-action="clear" data-id="${f.id}" type="button">❄️ 取消倒數</button>`;
 
+      const customCooldownHtml = `
+        <div class="custom-cooldown">
+          <span class="custom-label">⏱️ 自訂</span>
+          <input type="number" class="custom-hr" data-id="${f.id}" min="0" max="999" placeholder="時" />
+          <input type="number" class="custom-min" data-id="${f.id}" min="0" max="59" placeholder="分" />
+          <button class="cd-btn custom-start" data-id="${f.id}" type="button">開始（無收成期）</button>
+        </div>
+      `;
+
       const controlsHtml = isAdmin
-        ? `<div class="cooldown-btns">${cooldownBtns}</div>`
+        ? `<div class="cooldown-btns">${cooldownBtns}</div>${customCooldownHtml}`
         : `<div class="locked-hint">🔒 僅管理員可操作倒數，訪客只能查看狀態</div>`;
 
       const seedlingHtml = (f.seedlingCount !== null && f.seedlingCount !== undefined && f.seedlingCount !== '')
@@ -1141,11 +1183,27 @@
       shareBtn.addEventListener('click', () => shareFieldInfo(f, shareBtn));
 
       card.querySelectorAll('[data-action="start"]').forEach(btn => {
-        btn.addEventListener('click', () => startCooldown(btn.dataset.id, Number(btn.dataset.min)));
+        btn.addEventListener('click', () => startCooldown(btn.dataset.id, Number(btn.dataset.min), false));
       });
       card.querySelectorAll('[data-action="clear"]').forEach(btn => {
         btn.addEventListener('click', () => clearCooldown(btn.dataset.id));
       });
+
+      const customStartBtn = card.querySelector('.custom-start');
+      if(customStartBtn){
+        customStartBtn.addEventListener('click', () => {
+          const hrInput = card.querySelector('.custom-hr');
+          const minInput = card.querySelector('.custom-min');
+          const hr = Number(hrInput.value) || 0;
+          const min = Number(minInput.value) || 0;
+          const totalMinutes = hr * 60 + min;
+          if(totalMinutes <= 0){
+            alert('請至少輸入 1 分鐘以上的自訂時間喔 🌱');
+            return;
+          }
+          startCooldown(f.id, totalMinutes, true);
+        });
+      }
 
       // 花種輸入框內按 Enter，直接儲存花種（跟開始倒數是分開的兩件事，
       // 隨時都可以編輯，不管花田目前是空閒、可收成還是冷卻中）
@@ -1170,8 +1228,17 @@
       const card = document.querySelector(`[data-card-for="${f.id}"]`);
 
       const phase = getFlowerPhase(f);
-      if(lastPhaseById[f.id] !== phase){
+      const prevPhase = lastPhaseById[f.id];
+      if(prevPhase !== phase){
         phaseChanged = true;
+        // 從「有倒數中(可收成/冷卻中)」自然轉換成「空閒待命」，
+        // 代表倒數整個跑完了：順便清空花種，並盡力同步回後端。
+        if(prevPhase !== undefined && prevPhase !== 'idle' && phase === 'idle'){
+          f.flowerType = '';
+          if(isAdmin && API_URL && idToken){
+            fetch(`${API_URL}?action=clear&id=${encodeURIComponent(f.id)}&idToken=${encodeURIComponent(idToken)}`).catch(() => {});
+          }
+        }
         lastPhaseById[f.id] = phase;
       }
 
@@ -1186,7 +1253,7 @@
           f.cooldownStart = null;
         }
         row.className = 'status-row';
-        textEl.textContent = '❄️花田冷卻中';
+        textEl.textContent = '🏃🏻空閒待命中';
         timeEl.textContent = '';
         if(card) card.classList.remove('harvest-glow');
         return;
@@ -1203,9 +1270,9 @@
         timeEl.textContent = formatRemain(harvestEndsAt - now);
         if(card) card.classList.add('harvest-glow');
       } else {
-        // 超過 1 小時：恢復原樣，冷卻中且無法取果實
+        // 超過 1 小時（或自訂倒數本來就跳過收成期）：冷卻中且無法取果實
         row.className = 'status-row cooling';
-        textEl.textContent = '冷卻中，暫無果實';
+        textEl.textContent = '❄️花田冷卻中';
         timeEl.textContent = formatRemain(f.cooldownUntil - now);
         if(card) card.classList.remove('harvest-glow');
       }
