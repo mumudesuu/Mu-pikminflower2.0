@@ -289,6 +289,39 @@
     font-weight:700;
   }
 
+  .flag-row{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    background: #F5F0FA;
+    border-radius: 10px;
+  }
+  .flag-check{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12.5px;
+    font-weight:700;
+    color: #6B4A9A;
+    cursor:pointer;
+  }
+  .flag-check input[type="checkbox"]{
+    width:16px;
+    height:16px;
+    accent-color: var(--purple);
+    cursor:pointer;
+  }
+  .flag-time{
+    font-size:10.5px;
+    font-weight:600;
+    color:#9A7FC0;
+    background:#fff;
+    padding:1px 6px;
+    border-radius:999px;
+  }
+
   .flowertype-row{
     display:flex;
     align-items:center;
@@ -770,7 +803,9 @@
       cooldownStart: "",
       cooldownUntil: "",
       seedlingCount: 12,
-      flowerType: ""
+      flowerType: "",
+      seedlingCheckedAt: "",
+      budCheckedAt: ""
     },
   ];
 
@@ -799,6 +834,15 @@
       .replace(/'/g, '&#39;');
   }
 
+  function formatCheckedTime(ts){
+    const d = new Date(ts);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mi = String(d.getMinutes()).padStart(2, '0');
+    return `${mm}/${dd} ${hh}:${mi}`;
+  }
+
   function normalizeField(raw){
     return {
       id: raw.id,
@@ -813,6 +857,8 @@
       seedlingCount: (raw.seedlingCount !== undefined && raw.seedlingCount !== '' && raw.seedlingCount !== null)
         ? raw.seedlingCount : null,
       flowerType: raw.flowerType || '',
+      seedlingCheckedAt: raw.seedlingCheckedAt ? Number(raw.seedlingCheckedAt) : null,
+      budCheckedAt: raw.budCheckedAt ? Number(raw.budCheckedAt) : null,
     };
   }
 
@@ -963,6 +1009,32 @@
   function flashSaved(input){
     input.style.borderColor = 'var(--leaf)';
     setTimeout(() => { input.style.borderColor = ''; }, 900);
+  }
+
+  // 勾選/取消花苗、花苞。勾選時記錄當下時間，取消時清空。
+  async function toggleFlag(id, flagKey, checked){
+    if(!isAdmin) return;
+
+    if(!API_URL){
+      const f = flowers.find(x => x.id === id);
+      if(!f) return;
+      f[flagKey] = checked ? Date.now() : null;
+      renderCards();
+      return;
+    }
+
+    try{
+      const url = `${API_URL}?action=updateFlag&id=${encodeURIComponent(id)}&flag=${encodeURIComponent(flagKey)}&checked=${checked ? 'true' : 'false'}&idToken=${encodeURIComponent(idToken)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.ok){
+        alert('操作失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
+      }
+      await loadFields();
+    } catch(err){
+      alert('連線失敗，請檢查網路連線');
+      await loadFields();
+    }
   }
 
   /* ---------- 管理員登入（Google 帳號） ---------- */
@@ -1153,6 +1225,21 @@
         </div>
       `;
 
+      const flagRowHtml = isAdmin ? `
+        <div class="flag-row">
+          <label class="flag-check">
+            <input type="checkbox" class="flag-seedling" data-id="${f.id}" ${f.seedlingCheckedAt ? 'checked' : ''} />
+            花苗
+            ${f.seedlingCheckedAt ? `<span class="flag-time">${formatCheckedTime(f.seedlingCheckedAt)}</span>` : ''}
+          </label>
+          <label class="flag-check">
+            <input type="checkbox" class="flag-bud" data-id="${f.id}" ${f.budCheckedAt ? 'checked' : ''} />
+            花苞
+            ${f.budCheckedAt ? `<span class="flag-time">${formatCheckedTime(f.budCheckedAt)}</span>` : ''}
+          </label>
+        </div>
+      ` : '';
+
       card.innerHTML = `
         <div class="card-top">
           <div class="card-loc">📍 ${escapeHtml(f.name)}</div>
@@ -1165,6 +1252,7 @@
         </div>
         ${seedlingHtml}
         ${flowerTypeHtml}
+        ${flagRowHtml}
         <div class="coord-box">
           <code>${escapeHtml(f.coord)}</code>
           <button class="copy-btn" type="button">複製座標</button>
@@ -1181,6 +1269,15 @@
 
       const shareBtn = card.querySelector('.share-btn');
       shareBtn.addEventListener('click', () => shareFieldInfo(f, shareBtn));
+
+      const flagSeedlingEl = card.querySelector('.flag-seedling');
+      if(flagSeedlingEl){
+        flagSeedlingEl.addEventListener('change', (e) => toggleFlag(f.id, 'seedlingCheckedAt', e.target.checked));
+      }
+      const flagBudEl = card.querySelector('.flag-bud');
+      if(flagBudEl){
+        flagBudEl.addEventListener('change', (e) => toggleFlag(f.id, 'budCheckedAt', e.target.checked));
+      }
 
       card.querySelectorAll('[data-action="start"]').forEach(btn => {
         btn.addEventListener('click', () => startCooldown(btn.dataset.id, Number(btn.dataset.min), false));
