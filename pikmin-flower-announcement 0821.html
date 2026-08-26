@@ -751,6 +751,8 @@
     <div id="backendHint" class="backend-hint"></div>
   </header>
 
+  <div id="modalRoot"></div>
+
   <nav class="filter-bar" id="filterBar" aria-label="依地區篩選">
     <!-- chips injected by JS -->
   </nav>
@@ -840,6 +842,8 @@
   let isAdmin = false;
   let idToken = null;      // 登入成功後暫存的 Google ID Token（僅存於記憶體，重新整理就會清除）
   let adminEmail = null;
+  let adminName = null;
+  let pendingApplyToken = null; // 登入失敗、詢問是否申請成為管理員時暫存的 idToken
   let isSyncing = false;
 
   const grid = document.getElementById('grid');
@@ -1130,7 +1134,7 @@
   function refreshAdminPill(){
     if(isAdmin){
       adminPill.classList.add('is-admin');
-      adminStatusText.textContent = `🔓 管理員模式（${adminEmail || ''}）`;
+      adminStatusText.textContent = `🔓 管理員模式（${adminName || adminEmail || ''}）`;
       googleBtnContainer.style.display = 'none';
       logoutBtn.style.display = 'inline-flex';
     } else {
@@ -1165,10 +1169,11 @@
         isAdmin = true;
         idToken = token;
         adminEmail = email;
+        adminName = (payload && payload.name) ? payload.name : email;
         refreshAdminPill();
         renderCards();
       } else {
-        alert('本地示範模式：這個 Google 帳號不是設定的示範管理員信箱。\n（部署好後端後才會是真正安全的驗證）');
+        alert('本地示範模式：這個 Google 帳號不是設定的示範管理員信箱。\n（部署好後端後才會是真正安全的驗證，也才能使用「申請成為管理員」功能）');
       }
       return;
     }
@@ -1180,13 +1185,88 @@
         isAdmin = true;
         idToken = token;
         adminEmail = data.email;
+        adminName = data.name || data.email;
         refreshAdminPill();
         await loadFields(); // 重新讀取，登入後才看得到被隱藏的花田
       } else {
-        alert('這個 Google 帳號不是花田管理員，無法操作倒數計時 🌱');
+        // 還不是管理員：詢問要不要送出申請，讓站長審核
+        pendingApplyToken = token;
+        openApplyModal();
       }
     } catch(err){
       alert('登入驗證失敗，請檢查網路連線');
+    }
+  }
+
+  function openApplyModal(){
+    const modalRoot = document.getElementById('modalRoot');
+    modalRoot.innerHTML = `
+      <div class="modal-overlay" id="applyOverlay">
+        <div class="modal-box">
+          <h3>🌱 還不是管理員</h3>
+          <p>這個 Google 帳號目前還沒有操作花田的權限。<br>幫自己取一個暱稱，送出申請給站長審核吧！</p>
+          <input type="text" id="nicknameInput" placeholder="輸入暱稱（登入後會顯示這個名字）" maxlength="20" />
+          <div class="modal-error" id="applyError"></div>
+          <div class="modal-actions">
+            <button class="cancel" id="applyCancel" type="button">先不要</button>
+            <button class="confirm" id="applyConfirm" type="button">送出申請</button>
+          </div>
+        </div>
+      </div>
+    `;
+    const nicknameInput = document.getElementById('nicknameInput');
+    nicknameInput.focus();
+    document.getElementById('applyCancel').addEventListener('click', closeApplyModal);
+    document.getElementById('applyOverlay').addEventListener('click', (e) => {
+      if(e.target.id === 'applyOverlay') closeApplyModal();
+    });
+    document.getElementById('applyConfirm').addEventListener('click', submitAdminRequest);
+    nicknameInput.addEventListener('keydown', (e) => {
+      if(e.key === 'Enter') submitAdminRequest();
+    });
+  }
+
+  function closeApplyModal(){
+    document.getElementById('modalRoot').innerHTML = '';
+    pendingApplyToken = null;
+  }
+
+  async function submitAdminRequest(){
+    if(!pendingApplyToken) return;
+
+    const nicknameInput = document.getElementById('nicknameInput');
+    const nickname = nicknameInput ? nicknameInput.value.trim() : '';
+    if(!nickname){
+      document.getElementById('applyError').textContent = '請先填寫暱稱再送出喔 🌱';
+      if(nicknameInput) nicknameInput.focus();
+      return;
+    }
+
+    const confirmBtn = document.getElementById('applyConfirm');
+    if(confirmBtn){
+      confirmBtn.disabled = true;
+      confirmBtn.textContent = '送出中...';
+    }
+
+    try{
+      const res = await fetch(`${API_URL}?action=requestAdmin&idToken=${encodeURIComponent(pendingApplyToken)}&nickname=${encodeURIComponent(nickname)}`);
+      const data = await res.json();
+      const token = pendingApplyToken;
+      closeApplyModal();
+
+      if(!data.ok){
+        alert('申請失敗：' + (data.error || '未知錯誤'));
+        return;
+      }
+
+      alert(data.message || '申請已送出');
+
+      if(data.status === 'approved'){
+        // 萬一剛好已經是核准過的帳號，直接視同重新登入一次
+        handleGoogleCredential({ credential: token });
+      }
+    } catch(err){
+      alert('連線失敗，請檢查網路連線');
     }
   }
 
@@ -1230,6 +1310,7 @@
     isAdmin = false;
     idToken = null;
     adminEmail = null;
+    adminName = null;
     if(window.google && window.google.accounts){
       google.accounts.id.disableAutoSelect();
     }
