@@ -188,24 +188,37 @@
     border:2px solid var(--cream-deep);
     border-radius:20px;
     padding:20px 20px 18px;
-    display:flex; flex-direction:column; gap:16px;
+    display:flex; flex-direction:column; gap:14px;
     box-shadow:var(--card-shadow);
-    transition:transform .1s ease;
+    transition:transform .1s ease, border-color .15s ease, box-shadow .15s ease;
   }
+  .card.cooling{border-color:var(--sky); box-shadow:0 6px 0 rgba(46,147,178,0.24);}
   .card.ready{border-color:var(--pink); box-shadow:0 6px 0 rgba(232,93,141,0.22);}
 
   .card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
+  .name-row{display:flex; align-items:center; gap:6px;}
+  .name-pin{font-size:15px; flex-shrink:0;}
   .field-name{
     font-family:'Baloo 2',sans-serif; font-weight:700; font-size:18px;
     background:transparent; border:none; color:var(--ink); outline:none; width:100%; padding:0;
   }
-  .field-meta{font-family:'Zen Maru Gothic',sans-serif; font-size:10.5px; color:#9AAB9F; margin-top:4px;}
+  .field-meta{font-family:'Zen Maru Gothic',sans-serif; font-size:10.5px; color:#9AAB9F; margin-top:4px; margin-left:21px;}
   .del-btn{
     background:var(--cream); border:none; color:#9AAB9F;
     cursor:pointer; font-size:15px; line-height:1; width:30px; height:30px;
     border-radius:9px; flex-shrink:0; display:flex; align-items:center; justify-content:center;
   }
   .del-btn:hover{color:var(--danger); background:#FCE4E4;}
+
+  .status-pill{
+    align-self:flex-start;
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11.5px;
+    padding:5px 12px; border-radius:20px;
+    margin-top:-6px;
+  }
+  .status-pill.idle{background:#EAF6EE; color:var(--leaf-deep);}
+  .status-pill.cooling{background:#E4F3F8; color:var(--sky-deep);}
+  .status-pill.ready{background:#FCE7EF; color:var(--pink-deep);}
 
   .bloom-track{display:flex; align-items:center; gap:0;}
   .stage{
@@ -228,7 +241,11 @@
   .vine{height:3px; flex:0.5; background:var(--cream-deep); margin-bottom:22px; border-radius:2px; overflow:hidden;}
   .vine.on{background:var(--leaf);}
 
-  .species-row{display:flex;}
+  .species-row{display:flex; align-items:center; gap:8px;}
+  .species-label{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px;
+    color:var(--ink); flex-shrink:0; white-space:nowrap;
+  }
   .species-input{
     width:100%;
     background:var(--cream);
@@ -575,7 +592,12 @@ async function fetchFields(){
         createdAt: Number(f.createdAt) || Date.now(),
         timerEnd: f.timerEnd ? Number(f.timerEnd) : null,
         timerMinutes: f.timerMinutes ? Number(f.timerMinutes) : null
-      })).sort((a,b) => b.createdAt - a.createdAt);
+      })).sort((a,b) => {
+        const aKey = a.timerEnd !== null ? a.timerEnd : Infinity;
+        const bKey = b.timerEnd !== null ? b.timerEnd : Infinity;
+        if(aKey !== bKey) return aKey - bKey;
+        return b.createdAt - a.createdAt;
+      });
       setSyncStatus(true);
       render();
     }
@@ -677,15 +699,30 @@ function cardTemplate(f){
   const timerDone = hasTimer && remaining <= 0;
   const customOpen = customOpenIds.has(f.id);
 
+  let statusClass, statusLabel;
+  if(!hasTimer){
+    statusClass = 'idle'; statusLabel = '🟢 空閒中';
+  }else if(!timerDone){
+    statusClass = 'cooling'; statusLabel = '❄️ 冷卻中';
+  }else{
+    statusClass = 'ready'; statusLabel = '🍏 可採收';
+  }
+  const cardStateClass = !hasTimer ? '' : (timerDone ? 'ready' : 'cooling');
+
   return `
-  <div class="card ${timerDone ? 'ready':''}" data-id="${f.id}">
+  <div class="card ${cardStateClass}" data-id="${f.id}">
     <div class="card-head">
       <div style="flex:1; min-width:0;">
-        <input class="field-name" value="${escapeHtml(f.name)}" data-role="name" maxlength="24">
+        <div class="name-row">
+          <span class="name-pin">📍</span>
+          <input class="field-name" value="${escapeHtml(f.name)}" data-role="name" maxlength="24">
+        </div>
         <div class="field-meta">建立於 ${formatDate(f.createdAt)}</div>
       </div>
       <button class="del-btn" data-role="delete" title="刪除花田">🗑</button>
     </div>
+
+    <span class="status-pill ${statusClass}">${statusLabel}</span>
 
     ${adminMode ? `
     <div class="bloom-track">
@@ -707,7 +744,8 @@ function cardTemplate(f){
     ` : ''}
 
     <div class="species-row">
-      <input class="species-input" data-role="species" placeholder="🌱 花種（選填）" value="${escapeHtml(f.species)}" maxlength="20">
+      <span class="species-label">花種🌸</span>
+      <input class="species-input" data-role="species" placeholder="選填" value="${escapeHtml(f.species)}" maxlength="20">
     </div>
 
     <div class="timer-box">
