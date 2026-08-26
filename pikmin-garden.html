@@ -193,7 +193,6 @@
     transition:transform .1s ease, border-color .15s ease, box-shadow .15s ease;
   }
   .card.cooling{border-color:var(--sky); box-shadow:0 6px 0 rgba(46,147,178,0.24);}
-  .card.ready{border-color:var(--pink); box-shadow:0 6px 0 rgba(232,93,141,0.22);}
 
   .card-head{display:flex; justify-content:space-between; align-items:flex-start; gap:10px;}
   .name-row{display:flex; align-items:center; gap:6px;}
@@ -218,7 +217,6 @@
   }
   .status-pill.idle{background:#EAF6EE; color:var(--leaf-deep);}
   .status-pill.cooling{background:#E4F3F8; color:var(--sky-deep);}
-  .status-pill.ready{background:#FCE7EF; color:var(--pink-deep);}
 
   .bloom-track{display:flex; align-items:center; gap:0;}
   .stage{
@@ -317,14 +315,6 @@
   .timer-display{
     font-family:'Baloo 2',sans-serif; font-size:24px; font-weight:700; color:var(--sky-deep);
   }
-  .timer-display.done{color:var(--pink-deep);}
-  .ready-pill{
-    font-size:11px; font-family:'Baloo 2',sans-serif; font-weight:700;
-    background:var(--pink); color:#5A1230;
-    padding:4px 10px; border-radius:20px;
-    animation:pulse 1.6s ease-in-out infinite;
-  }
-  @keyframes pulse{0%,100%{opacity:1;} 50%{opacity:.5;}}
   .clear-btn{
     background:none; border:none; color:#9AAB9F; font-size:12px; font-weight:700; cursor:pointer;
     text-decoration:underline;
@@ -445,6 +435,7 @@ const PRESETS = [
 ];
 let apiUrl = DEFAULT_API_URL;
 let fields = [];
+let initialLoading = true;
 let pollHandle = null;
 let tickHandle = null;
 let adminMode = false;
@@ -599,10 +590,13 @@ async function fetchFields(){
         return b.createdAt - a.createdAt;
       });
       setSyncStatus(true);
+      initialLoading = false;
       render();
     }
   }catch(e){
     setSyncStatus(false);
+    initialLoading = false;
+    render();
   }
 }
 
@@ -622,20 +616,29 @@ async function callApi(payload){
 }
 
 async function addField(name){
-  await callApi({action:'add', name});
-  fetchFields();
+  const tempId = 'temp' + Date.now();
+  fields.unshift({
+    id: tempId, name, species:'',
+    harvest:false, fridge:false, ready:false,
+    createdAt: Date.now(), timerEnd:null, timerMinutes:null
+  });
+  render();
+  const result = await callApi({action:'add', name});
+  if(result && result.ok && result.id){
+    const f = fields.find(x=>x.id===tempId);
+    if(f) f.id = result.id;
+  }
 }
 async function deleteField(id){
   fields = fields.filter(f => f.id !== id);
   render();
-  await callApi({action:'delete', id});
-  fetchFields();
+  callApi({action:'delete', id});
 }
 async function renameField(id, name){
-  await callApi({action:'rename', id, name: name.trim() || '未命名花田'});
+  callApi({action:'rename', id, name: name.trim() || '未命名花田'});
 }
 async function setSpecies(id, species){
-  await callApi({action:'setSpecies', id, species: species.trim()});
+  callApi({action:'setSpecies', id, species: species.trim()});
 }
 async function toggleStage(id, key){
   if(!adminMode) return;
@@ -643,29 +646,31 @@ async function toggleStage(id, key){
   if(f) f[key] = !f[key];
   render();
   const result = await callApi({action:'toggleStage', id, key, idToken: adminIdToken});
-  if(result && result.ok === false && result.error === 'unauthorized'){
-    toast('登入已過期，請重新登入管理員帳號');
-    adminMode = false;
-    adminIdToken = '';
-    try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
-    updateAdminUI();
+  if(result && result.ok === false){
+    if(f) f[key] = !f[key];
+    if(result.error === 'unauthorized'){
+      toast('登入已過期，請重新登入管理員帳號');
+      adminMode = false;
+      adminIdToken = '';
+      try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
+      updateAdminUI();
+    }else{
+      render();
+    }
   }
-  fetchFields();
 }
 async function startTimer(id, minutes){
   const f = fields.find(x=>x.id===id);
   if(f){ f.timerEnd = Date.now() + minutes*60000; f.timerMinutes = minutes; }
   customOpenIds.delete(id);
   render();
-  await callApi({action:'startTimer', id, minutes});
-  fetchFields();
+  callApi({action:'startTimer', id, minutes});
 }
 async function clearTimer(id){
   const f = fields.find(x=>x.id===id);
   if(f){ f.timerEnd = null; f.timerMinutes = null; }
   render();
-  await callApi({action:'clearTimer', id});
-  fetchFields();
+  callApi({action:'clearTimer', id});
 }
 
 function formatDate(ts){
@@ -696,18 +701,11 @@ function escapeHtml(str){
 function cardTemplate(f){
   const hasTimer = !!f.timerEnd;
   const remaining = hasTimer ? f.timerEnd - Date.now() : 0;
-  const timerDone = hasTimer && remaining <= 0;
   const customOpen = customOpenIds.has(f.id);
 
-  let statusClass, statusLabel;
-  if(!hasTimer){
-    statusClass = 'idle'; statusLabel = '🟢 空閒中';
-  }else if(!timerDone){
-    statusClass = 'cooling'; statusLabel = '❄️ 冷卻中';
-  }else{
-    statusClass = 'ready'; statusLabel = '🍏 可採收';
-  }
-  const cardStateClass = !hasTimer ? '' : (timerDone ? 'ready' : 'cooling');
+  const statusClass = hasTimer ? 'cooling' : 'idle';
+  const statusLabel = hasTimer ? '❄️ 冷卻中' : '🟢 空閒中';
+  const cardStateClass = hasTimer ? 'cooling' : '';
 
   return `
   <div class="card ${cardStateClass}" data-id="${f.id}">
@@ -752,10 +750,9 @@ function cardTemplate(f){
       ${hasTimer ? `
         <div class="timer-active-row">
           <span class="timer-label">冷藏倒數 · ${formatDuration(f.timerMinutes)}</span>
-          ${timerDone ? '<span class="ready-pill">可以取出了</span>' : `<button class="clear-btn" data-role="clear-timer">取消</button>`}
+          <button class="clear-btn" data-role="clear-timer">清除倒數</button>
         </div>
-        <div class="timer-display ${timerDone?'done':''}" data-role="countdown">${formatCountdown(remaining)}</div>
-        ${timerDone ? `<button class="clear-btn" data-role="clear-timer">重設</button>` : ''}
+        <div class="timer-display" data-role="countdown">${formatCountdown(remaining)}</div>
       ` : `
         <span class="timer-label">冷藏倒數</span>
         <div class="preset-row">
@@ -781,7 +778,9 @@ function render(){
   if(fields.length === 0){
     grid.innerHTML = '';
     empty.style.display = 'block';
-    document.getElementById('emptyHint').textContent = '新增第一塊花田，開始記錄採收進度吧。';
+    document.getElementById('emptyHint').textContent = initialLoading
+      ? '🌱 正在讀取花田資料…'
+      : '新增第一塊花田，開始記錄採收進度吧。';
     return;
   }
   empty.style.display = 'none';
@@ -842,18 +841,13 @@ function render(){
 function startTicker(){
   if(tickHandle) clearInterval(tickHandle);
   tickHandle = setInterval(()=>{
-    let needsRender = false;
     document.querySelectorAll('.card').forEach(card=>{
       const f = fields.find(x=>x.id===card.dataset.id);
       if(!f || !f.timerEnd) return;
       const remaining = f.timerEnd - Date.now();
       const disp = card.querySelector('[data-role="countdown"]');
-      if(disp){
-        disp.textContent = formatCountdown(remaining);
-        if(remaining <= 0 && !disp.classList.contains('done')) needsRender = true;
-      }
+      if(disp) disp.textContent = formatCountdown(remaining);
     });
-    if(needsRender) render();
   }, 1000);
 }
 
