@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>皮克敏花田手記</title>
+<title>🌸皮克敏花田手記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -357,6 +357,66 @@
   .modal-close:hover{color:var(--danger);}
   #googleBtnContainer{display:flex; justify-content:center; min-height:44px;}
 
+  .passcode-gate{
+    position:fixed; inset:0; z-index:9999;
+    background:
+      radial-gradient(circle at 8% 12%, rgba(255,201,60,.20), transparent 30%),
+      radial-gradient(circle at 92% 10%, rgba(255,127,168,.18), transparent 32%),
+      radial-gradient(circle at 50% 92%, rgba(95,193,222,.16), transparent 36%),
+      var(--cream);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .passcode-box{
+    background:var(--white);
+    border-radius:22px;
+    padding:36px 30px 30px;
+    max-width:320px; width:100%;
+    text-align:center;
+    box-shadow:var(--card-shadow);
+  }
+  .passcode-box .gate-icon{font-size:40px; margin-bottom:8px;}
+  .passcode-box h3{
+    font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--leaf-deep);
+    margin:0 0 8px; font-size:20px;
+  }
+  .passcode-box p{font-size:13px; color:#789080; margin:0 0 20px; line-height:1.7;}
+  .passcode-input{
+    width:100%;
+    background:var(--cream);
+    border:2px solid var(--cream-deep);
+    border-radius:12px;
+    padding:12px 14px;
+    font-family:'Baloo 2',sans-serif;
+    font-size:20px;
+    font-weight:700;
+    letter-spacing:6px;
+    text-align:center;
+    color:var(--ink);
+    outline:none;
+  }
+  .passcode-input:focus{border-color:var(--leaf);}
+  .passcode-error{
+    display:none; color:var(--danger); font-size:12.5px; font-weight:700;
+    margin-top:8px;
+  }
+  .passcode-submit{
+    width:100%; margin-top:14px;
+    background:var(--leaf); color:var(--white); border:none;
+    border-radius:12px; padding:11px 0;
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:14.5px;
+    cursor:pointer;
+    box-shadow:0 5px 0 var(--leaf-deep);
+    transition:transform .08s ease;
+  }
+  .passcode-submit:active{transform:translateY(4px); box-shadow:0 1px 0 var(--leaf-deep);}
+  @keyframes shake{
+    0%,100%{transform:translateX(0);}
+    25%{transform:translateX(-6px);}
+    75%{transform:translateX(6px);}
+  }
+  .passcode-box.shake{animation:shake .3s ease;}
+
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
     background:var(--ink); color:var(--cream);
@@ -376,6 +436,17 @@
 </head>
 <body>
 
+<div class="passcode-gate" id="passcodeGate">
+  <div class="passcode-box" id="passcodeBox">
+    <div class="gate-icon">🔐</div>
+    <h3>花田手記通關密語</h3>
+    <p>請輸入通關密語才能進入花田手記。</p>
+    <input type="password" inputmode="numeric" class="passcode-input" id="passcodeInput" maxlength="12" autofocus>
+    <div class="passcode-error" id="passcodeError">密語不正確，請再試一次 🌱</div>
+    <button class="passcode-submit" id="passcodeSubmit">解鎖</button>
+  </div>
+</div>
+
 <span class="float f1">🍃</span>
 <span class="float f2">🌱</span>
 <span class="float f3">🍃</span>
@@ -386,7 +457,7 @@
   <div>
     <p class="brand-eyebrow">花田管理 · 種花紀錄</p>
     <h1>🌸 皮克敏<span>花田</span>手記</h1>
-    <p class="sub">記錄花田與冷藏倒數，訪客也能新增花田、設定倒數。</p>
+    <p class="sub">記錄花田與冷藏倒數，訪客也能新增花田、設定倒數；已採果／已冰冰箱／待取冰箱僅管理員可標記。</p>
   </div>
   <div class="head-actions">
     <span class="sync-pill off" id="syncPill"><span class="dot"></span>尚未連接</span>
@@ -860,6 +931,29 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
 });
 document.getElementById('newFieldName').addEventListener('keydown', e=>{
   if(e.key === 'Enter') document.getElementById('addBtn').click();
+});
+
+/* ---------- 通關密語鎖 ---------- */
+const PASSCODE = '130807';
+
+function checkPasscode(){
+  const input = document.getElementById('passcodeInput');
+  const val = input.value.trim();
+  if(val === PASSCODE){
+    document.getElementById('passcodeGate').style.display = 'none';
+  }else{
+    const box = document.getElementById('passcodeBox');
+    document.getElementById('passcodeError').style.display = 'block';
+    box.classList.remove('shake');
+    void box.offsetWidth;
+    box.classList.add('shake');
+    input.value = '';
+    input.focus();
+  }
+}
+document.getElementById('passcodeSubmit').addEventListener('click', checkPasscode);
+document.getElementById('passcodeInput').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') checkPasscode();
 });
 
 loadAdminState();
