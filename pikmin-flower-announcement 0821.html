@@ -279,6 +279,21 @@
     text-align:center;
   }
 
+  .hidden-badge{
+    display:inline-block;
+    font-size:11px;
+    font-weight:800;
+    color:#fff;
+    background: #8A7A9A;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+  }
+
+  .status-filter-bar{
+    margin-top: -14px;
+  }
+
   .seedling-row{
     font-size:12.5px;
     color: var(--leaf-deep);
@@ -740,6 +755,10 @@
     <!-- chips injected by JS -->
   </nav>
 
+  <nav class="filter-bar status-filter-bar" id="statusFilterBar" aria-label="依狀態篩選">
+    <!-- chips injected by JS -->
+  </nav>
+
   <main class="grid" id="grid">
     <!-- cards injected by JS -->
   </main>
@@ -805,7 +824,8 @@
       seedlingCount: 12,
       flowerType: "",
       seedlingCheckedAt: "",
-      budCheckedAt: ""
+      budCheckedAt: "",
+      hidden: ""
     },
   ];
 
@@ -814,6 +834,7 @@
   const LOCAL_DEMO_ADMIN_EMAIL = "";
 
   const HARVEST_WINDOW_MS = 60 * 60 * 1000; // 開花後第 1 小時內有果實
+  const STANDARD_CYCLE_MS = 23 * 60 * 60 * 1000; // 標準完整開花週期，自訂倒數用這個反推起始時間
 
   let flowers = [];
   let isAdmin = false;
@@ -823,7 +844,9 @@
 
   const grid = document.getElementById('grid');
   const filterBar = document.getElementById('filterBar');
+  const statusFilterBar = document.getElementById('statusFilterBar');
   let activeRegion = "全部";
+  let activeStatus = "全部狀態";
 
   function escapeHtml(str){
     return String(str == null ? '' : str)
@@ -859,6 +882,7 @@
       flowerType: raw.flowerType || '',
       seedlingCheckedAt: raw.seedlingCheckedAt ? Number(raw.seedlingCheckedAt) : null,
       budCheckedAt: raw.budCheckedAt ? Number(raw.budCheckedAt) : null,
+      hidden: String(raw.hidden).toUpperCase() === 'TRUE',
     };
   }
 
@@ -875,7 +899,10 @@
     }
     try{
       isSyncing = true;
-      const res = await fetch(`${API_URL}?action=list`);
+      const url = idToken
+        ? `${API_URL}?action=list&idToken=${encodeURIComponent(idToken)}`
+        : `${API_URL}?action=list`;
+      const res = await fetch(url);
       const data = await res.json();
       if(data.ok){
         flowers = data.fields.map(normalizeField);
@@ -904,6 +931,28 @@
     });
   }
 
+  const STATUS_FILTERS = {
+    "全部狀態": { icon: "🌈" },
+    "空閒中":   { icon: "🏃🏻" },
+    "冷卻中":   { icon: "❄️" },
+  };
+
+  function renderStatusChips(){
+    statusFilterBar.innerHTML = "";
+    Object.keys(STATUS_FILTERS).forEach(s => {
+      const btn = document.createElement('button');
+      btn.className = 'chip' + (s === activeStatus ? ' active' : '');
+      btn.type = 'button';
+      btn.innerHTML = `${STATUS_FILTERS[s].icon} ${s}`;
+      btn.addEventListener('click', () => {
+        activeStatus = s;
+        renderStatusChips();
+        renderCards();
+      });
+      statusFilterBar.appendChild(btn);
+    });
+  }
+
   function formatRemain(ms){
     const totalSec = Math.max(0, Math.floor(ms / 1000));
     const h = Math.floor(totalSec / 3600);
@@ -913,7 +962,7 @@
     return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
   }
 
-  async function startCooldown(id, minutes, skipHarvest){
+  async function startCooldown(id, minutes, customRemaining){
     if(!isAdmin) return;
 
     const ftInput = document.querySelector(`.ft-input[data-id="${id}"]`);
@@ -922,15 +971,24 @@
     if(!API_URL){
       const f = flowers.find(x => x.id === id);
       if(!f) return;
-      f.cooldownStart = Date.now() - (skipHarvest ? HARVEST_WINDOW_MS : 0);
-      f.cooldownUntil = Date.now() + minutes * 60 * 1000;
+      const now = Date.now();
+      const remainMs = minutes * 60 * 1000;
+      if(customRemaining){
+        // 自訂剩餘時間：反推回標準 23 小時週期實際上是何時開始的，
+        // 這樣可收成的第一小時判斷才會跟著一起往前推移。
+        const elapsed = Math.max(0, STANDARD_CYCLE_MS - remainMs);
+        f.cooldownStart = now - elapsed;
+      } else {
+        f.cooldownStart = now;
+      }
+      f.cooldownUntil = now + remainMs;
       if(flowerTypeValue) f.flowerType = flowerTypeValue;
       renderCards();
       return;
     }
 
     try{
-      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&skipHarvest=${skipHarvest ? 'true' : 'false'}&flowerType=${encodeURIComponent(flowerTypeValue)}&idToken=${encodeURIComponent(idToken)}`;
+      const url = `${API_URL}?action=start&id=${encodeURIComponent(id)}&minutes=${minutes}&customRemaining=${customRemaining ? 'true' : 'false'}&flowerType=${encodeURIComponent(flowerTypeValue)}&idToken=${encodeURIComponent(idToken)}`;
       const res = await fetch(url);
       const data = await res.json();
       if(!data.ok){
@@ -1037,6 +1095,32 @@
     }
   }
 
+  // 切換花田是否對訪客隱藏
+  async function toggleHidden(id, hidden){
+    if(!isAdmin) return;
+
+    if(!API_URL){
+      const f = flowers.find(x => x.id === id);
+      if(!f) return;
+      f.hidden = hidden;
+      renderCards();
+      return;
+    }
+
+    try{
+      const url = `${API_URL}?action=toggleHidden&id=${encodeURIComponent(id)}&hidden=${hidden ? 'true' : 'false'}&idToken=${encodeURIComponent(idToken)}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      if(!data.ok){
+        alert('操作失敗：' + (data.error || '未知錯誤，請重新登入管理員'));
+      }
+      await loadFields();
+    } catch(err){
+      alert('連線失敗，請檢查網路連線');
+      await loadFields();
+    }
+  }
+
   /* ---------- 管理員登入（Google 帳號） ---------- */
   const adminPill = document.getElementById('adminPill');
   const adminStatusText = document.getElementById('adminStatusText');
@@ -1097,7 +1181,7 @@
         idToken = token;
         adminEmail = data.email;
         refreshAdminPill();
-        renderCards();
+        await loadFields(); // 重新讀取，登入後才看得到被隱藏的花田
       } else {
         alert('這個 Google 帳號不是花田管理員，無法操作倒數計時 🌱');
       }
@@ -1142,7 +1226,7 @@
     setTimeout(() => waitForGoogleAndInit(retriesLeft - 1), 250);
   }
 
-  logoutBtn.addEventListener('click', () => {
+  logoutBtn.addEventListener('click', async () => {
     isAdmin = false;
     idToken = null;
     adminEmail = null;
@@ -1150,7 +1234,7 @@
       google.accounts.id.disableAutoSelect();
     }
     refreshAdminPill();
-    renderCards();
+    await loadFields(); // 重新讀取，登出後恢復訪客視角(看不到隱藏花田)
   });
 
   refreshAdminPill();
@@ -1167,7 +1251,20 @@
 
   function renderCards(){
     grid.innerHTML = "";
-    const filtered = activeRegion === "全部" ? flowers : flowers.filter(f => f.region === activeRegion);
+    let filtered = activeRegion === "全部" ? flowers : flowers.filter(f => f.region === activeRegion);
+
+    // 雙重保險：非管理員一律看不到被隱藏的花田
+    // （正式後端在 list 動作就會先過濾掉了，這裡是本地示範模式跟保險機制）
+    if(!isAdmin){
+      filtered = filtered.filter(f => !f.hidden);
+    }
+
+    // 狀態篩選：空閒中 = 沒有在倒數；冷卻中 = 可收成(前1小時) + 冷卻(1小時後)都算
+    if(activeStatus === "空閒中"){
+      filtered = filtered.filter(f => getFlowerPhase(f) === 'idle');
+    } else if(activeStatus === "冷卻中"){
+      filtered = filtered.filter(f => getFlowerPhase(f) !== 'idle');
+    }
 
     // 可收成中（開花後 1 小時內）的花田固定排在最上面；
     // 一旦超過 1 小時變成冷卻中，就會回到原本的排序位置。
@@ -1179,7 +1276,7 @@
     });
 
     if(list.length === 0){
-      grid.innerHTML = `<div class="empty"><span class="emoji">🌱</span>目前沒有符合條件的開花公告，換個地區看看吧。</div>`;
+      grid.innerHTML = `<div class="empty"><span class="emoji">🌱</span>目前沒有符合條件的開花公告，換個篩選條件看看吧。</div>`;
       return;
     }
 
@@ -1195,15 +1292,21 @@
 
       const customCooldownHtml = `
         <div class="custom-cooldown">
-          <span class="custom-label">⏱️ 自訂</span>
+          <span class="custom-label">⏱️ 自訂剩餘</span>
           <input type="number" class="custom-hr" data-id="${f.id}" min="0" max="999" placeholder="時" />
           <input type="number" class="custom-min" data-id="${f.id}" min="0" max="59" placeholder="分" />
-          <button class="cd-btn custom-start" data-id="${f.id}" type="button">開始（無收成期）</button>
+          <button class="cd-btn custom-start" data-id="${f.id}" type="button">開始自訂倒數</button>
         </div>
       `;
 
+      const hideBtnHtml = `
+        <button class="cd-btn hide-toggle" data-id="${f.id}" data-hidden="${f.hidden ? 'true' : 'false'}" type="button">
+          ${f.hidden ? '👁️ 取消隱藏' : '🙈 隱藏此花田'}
+        </button>
+      `;
+
       const controlsHtml = isAdmin
-        ? `<div class="cooldown-btns">${cooldownBtns}</div>${customCooldownHtml}`
+        ? `<div class="cooldown-btns">${cooldownBtns}</div>${customCooldownHtml}<div class="cooldown-btns">${hideBtnHtml}</div>`
         : `<div class="locked-hint">🔒 僅管理員可操作倒數，訪客只能查看狀態</div>`;
 
       const seedlingHtml = (f.seedlingCount !== null && f.seedlingCount !== undefined && f.seedlingCount !== '')
@@ -1240,7 +1343,12 @@
         </div>
       ` : '';
 
+      const hiddenBadge = (isAdmin && f.hidden)
+        ? `<span class="hidden-badge">🙈 已隱藏（訪客看不到）</span>`
+        : '';
+
       card.innerHTML = `
+        ${hiddenBadge}
         <div class="card-top">
           <div class="card-loc">📍 ${escapeHtml(f.name)}</div>
           <span class="color-badge" style="background:${REGIONS[f.region].bg}">${escapeHtml(f.region)}</span>
@@ -1299,6 +1407,14 @@
             return;
           }
           startCooldown(f.id, totalMinutes, true);
+        });
+      }
+
+      const hideToggleBtn = card.querySelector('.hide-toggle');
+      if(hideToggleBtn){
+        hideToggleBtn.addEventListener('click', () => {
+          const currentlyHidden = hideToggleBtn.dataset.hidden === 'true';
+          toggleHidden(f.id, !currentlyHidden);
         });
       }
 
@@ -1443,6 +1559,7 @@
       `${f.name} in${f.region}`,
       '',
       `花種：${f.flowerType ? f.flowerType : '尚未設定'}`,
+      `苗數：${(f.seedlingCount !== null && f.seedlingCount !== undefined && f.seedlingCount !== '') ? f.seedlingCount + '株' : '未紀錄'}`,
       `地點：${f.coord}`,
       `剩餘：${remainText}`,
       '備註：',
@@ -1486,6 +1603,7 @@
   });
 
   renderChips();
+  renderStatusChips();
   loadFields();
 
   const backendHintEl = document.getElementById('backendHint');
