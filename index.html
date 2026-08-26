@@ -754,6 +754,7 @@
       <a
         class="entrance main"
         href="pikmin-garden.html"
+        id="diaryEntrance"
       >
 
         <div class="entrance-icon">
@@ -903,6 +904,35 @@
           behavior:'smooth',
           block:'center'
         });
+
+      }
+
+    }
+  );
+
+
+  /*
+   * 點擊「花田手記」需要先輸入通關密碼
+   */
+  const DIARY_PASSCODE = '130807';
+
+  document.getElementById('diaryEntrance').addEventListener(
+    'click',
+    function(e){
+
+      e.preventDefault();
+
+      const input = prompt('請輸入花田手記通關密碼');
+
+      if(input === null) return;
+
+      if(input.trim() === DIARY_PASSCODE){
+
+        window.location.href = this.getAttribute('href');
+
+      }else{
+
+        alert('密碼不正確，請再試一次 🌱');
 
       }
 
