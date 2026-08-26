@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer onload="initGoogleSignIn()"></script>
 <style>
   :root{
     --cream:#FFF6E8;
@@ -227,6 +228,22 @@
   .vine{height:3px; flex:0.5; background:var(--cream-deep); margin-bottom:22px; border-radius:2px; overflow:hidden;}
   .vine.on{background:var(--leaf);}
 
+  .species-row{display:flex;}
+  .species-input{
+    width:100%;
+    background:var(--cream);
+    border:2px solid var(--cream-deep);
+    border-radius:11px;
+    padding:9px 12px;
+    font-family:'Zen Maru Gothic',sans-serif;
+    font-size:13px;
+    font-weight:700;
+    color:var(--ink);
+    outline:none;
+  }
+  .species-input::placeholder{color:#A9BBAE; font-weight:600;}
+  .species-input:focus{border-color:var(--purple);}
+
   .timer-box{border-top:2px dashed var(--cream-deep); padding-top:14px; display:flex; flex-direction:column; gap:10px;}
   .timer-label{font-size:11.5px; color:#9AAB9F; font-weight:700; letter-spacing:.02em;}
   .preset-row{display:flex; gap:8px;}
@@ -243,6 +260,42 @@
     cursor:pointer;
   }
   .preset-btn:hover{border-color:var(--sky); background:#EAF7FB;}
+  .custom-toggle{
+    align-self:flex-start;
+    background:none; border:none; color:var(--purple-deep);
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:12.5px;
+    cursor:pointer; padding:2px 0;
+  }
+  .custom-toggle:hover{text-decoration:underline;}
+  .custom-row{display:flex; align-items:center; gap:6px; flex-wrap:wrap;}
+  .custom-input{
+    width:56px;
+    background:var(--cream);
+    border:2px solid var(--cream-deep);
+    border-radius:9px;
+    padding:7px 6px;
+    text-align:center;
+    font-family:'Baloo 2',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    color:var(--ink);
+    outline:none;
+  }
+  .custom-input:focus{border-color:var(--purple);}
+  .custom-row span{font-size:12px; color:#9AAB9F; font-weight:700;}
+  .timer-btn{
+    background:var(--purple);
+    color:var(--white);
+    border:none;
+    border-radius:9px;
+    padding:7px 14px;
+    font-family:'Baloo 2',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    cursor:pointer;
+    margin-left:auto;
+  }
+  .timer-btn:hover{background:var(--purple-deep);}
   .timer-active-row{display:flex; align-items:center; justify-content:space-between;}
   .timer-display{
     font-family:'Baloo 2',sans-serif; font-size:24px; font-weight:700; color:var(--sky-deep);
@@ -260,6 +313,42 @@
     text-decoration:underline;
   }
   .clear-btn:hover{color:var(--danger);}
+
+  .role-tag{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11px;
+    padding:6px 12px; border-radius:20px;
+    display:none; align-items:center; gap:6px;
+    background:#F2E9FB; color:var(--purple-deep);
+  }
+
+  .modal-overlay{
+    position:fixed; inset:0; z-index:100;
+    background:rgba(43,70,54,0.45);
+    display:none; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal-box{
+    background:var(--white);
+    border-radius:22px;
+    padding:30px 26px 26px;
+    max-width:320px; width:100%;
+    text-align:center;
+    box-shadow:var(--card-shadow);
+    position:relative;
+  }
+  .modal-box .modal-icon{font-size:36px; margin-bottom:6px;}
+  .modal-box h3{
+    font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--leaf-deep);
+    margin:0 0 8px; font-size:19px;
+  }
+  .modal-box p{font-size:13px; color:#789080; margin:0 0 20px; line-height:1.7;}
+  .modal-close{
+    position:absolute; top:12px; right:14px;
+    background:none; border:none; font-size:18px; color:#9AAB9F; cursor:pointer;
+  }
+  .modal-close:hover{color:var(--danger);}
+  #googleBtnContainer{display:flex; justify-content:center; min-height:44px;}
 
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
@@ -290,10 +379,12 @@
   <div>
     <p class="brand-eyebrow">花田管理 · 種花紀錄</p>
     <h1>🌸 皮克敏<span>花田</span>手記</h1>
-    <p class="sub">已採果、已冰冰箱、待取冰箱一次記錄，資料存在 Google 試算表，隨開隨用、多裝置自動同步。</p>
+    <p class="sub">記錄花田與冷藏倒數，訪客也能新增花田、設定倒數；已採果／已冰冰箱／待取冰箱僅管理員可標記。</p>
   </div>
   <div class="head-actions">
     <span class="sync-pill off" id="syncPill"><span class="dot"></span>尚未連接</span>
+    <span class="role-tag" id="roleTag">👑 管理員模式</span>
+    <button class="icon-btn" id="adminToggle" title="管理員登入">🔒</button>
   </div>
 </header>
 
@@ -313,14 +404,35 @@
 <footer>🌼 沐光花語｜友田登記 · 皮克敏花田手記</footer>
 <div class="toast" id="toast"></div>
 
+<div class="modal-overlay" id="loginModal">
+  <div class="modal-box">
+    <button class="modal-close" id="loginModalClose">✕</button>
+    <div class="modal-icon">🔐</div>
+    <h3>管理員登入</h3>
+    <p>僅限管理員的 Google 帳號可以登入，登入後才能記錄已採果／已冰冰箱／待取冰箱。</p>
+    <div id="googleBtnContainer"></div>
+  </div>
+</div>
+
 <script>
 const APIURL_KEY = 'pikmin-api-url';
 const DEFAULT_API_URL = 'https://script.google.com/macros/s/AKfycbw8nn7gI0n6-w72t4LfKRzOHguOeuaZVqNiKbouJqKbm_3owUNO-ATpdqrd6LNU0pSQ/exec';
-const PRESETS = [23, 6, 3];
+// 從 Google Cloud Console 建立的 OAuth 用戶端 ID，貼在這裡（結尾是 .apps.googleusercontent.com）
+const GOOGLE_CLIENT_ID = '1001037373208-3sdt3t6aekf1v0efidd53ob62m92t2nl.apps.googleusercontent.com';
+const ADMIN_EMAIL = 'sandy36095@gmail.com';
+const ADMIN_TOKEN_KEY = 'pikmin-admin-token';
+const PRESETS = [
+  { label:'23 小時', minutes: 23*60 },
+  { label:'6 小時', minutes: 6*60 },
+  { label:'3 小時', minutes: 3*60 }
+];
 let apiUrl = DEFAULT_API_URL;
 let fields = [];
 let pollHandle = null;
 let tickHandle = null;
+let adminMode = false;
+let adminIdToken = '';
+let customOpenIds = new Set();
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -340,13 +452,104 @@ function setSyncStatus(ok){
   }
 }
 
-async function loadApiUrl(){
+/* ---------- Google 登入 ---------- */
+
+function decodeJwt(token){
   try{
-    const res = await window.storage.get(APIURL_KEY, true);
-    if(res && res.value){
-      apiUrl = res.value;
+    const payload = token.split('.')[1];
+    const json = decodeURIComponent(
+      atob(payload.replace(/-/g,'+').replace(/_/g,'/'))
+        .split('')
+        .map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+
+function isTokenValid(token){
+  const payload = decodeJwt(token);
+  if(!payload) return false;
+  if(payload.email !== ADMIN_EMAIL || !payload.email_verified) return false;
+  if(payload.exp * 1000 < Date.now()) return false;
+  return true;
+}
+
+function initGoogleSignIn(){
+  if(!window.google || !google.accounts || !google.accounts.id) return;
+  google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: handleCredentialResponse
+  });
+  google.accounts.id.renderButton(
+    document.getElementById('googleBtnContainer'),
+    { theme:'outline', size:'large', shape:'pill', text:'signin_with' }
+  );
+}
+
+async function handleCredentialResponse(response){
+  const token = response.credential;
+  if(isTokenValid(token)){
+    adminIdToken = token;
+    adminMode = true;
+    try{ await window.storage.set(ADMIN_TOKEN_KEY, token, false); }catch(e){}
+    toast('已用管理員帳號登入');
+    closeLoginModal();
+    updateAdminUI();
+  }else{
+    toast('這個 Google 帳號沒有管理員權限');
+    if(window.google) google.accounts.id.disableAutoSelect();
+  }
+}
+
+async function loadAdminState(){
+  try{
+    const res = await window.storage.get(ADMIN_TOKEN_KEY, false);
+    if(res && res.value && isTokenValid(res.value)){
+      adminIdToken = res.value;
+      adminMode = true;
     }
   }catch(e){}
+  updateAdminUI();
+}
+
+function openLoginModal(){ document.getElementById('loginModal').classList.add('open'); }
+function closeLoginModal(){ document.getElementById('loginModal').classList.remove('open'); }
+
+function updateAdminUI(){
+  const btn = document.getElementById('adminToggle');
+  const tag = document.getElementById('roleTag');
+  if(adminMode){
+    btn.textContent = '🔓';
+    btn.title = '登出管理員';
+    tag.style.display = 'flex';
+  }else{
+    btn.textContent = '🔒';
+    btn.title = '管理員登入';
+    tag.style.display = 'none';
+  }
+  render();
+}
+
+document.getElementById('adminToggle').addEventListener('click', async ()=>{
+  if(adminMode){
+    if(confirm('要登出管理員模式嗎？')){
+      adminMode = false;
+      adminIdToken = '';
+      try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
+      if(window.google) google.accounts.id.disableAutoSelect();
+      updateAdminUI();
+    }
+  }else{
+    openLoginModal();
+  }
+});
+document.getElementById('loginModalClose').addEventListener('click', closeLoginModal);
+document.getElementById('loginModal').addEventListener('click', e=>{
+  if(e.target.id === 'loginModal') closeLoginModal();
+});
+
+function loadApiUrl(){
   fetchFields();
   startPolling();
 }
@@ -365,12 +568,13 @@ async function fetchFields(){
       fields = data.fields.map(f => ({
         id: f.id,
         name: f.name,
+        species: f.species || '',
         harvest: f.harvest === true || f.harvest === 'TRUE',
         fridge: f.fridge === true || f.fridge === 'TRUE',
         ready: f.ready === true || f.ready === 'TRUE',
         createdAt: Number(f.createdAt) || Date.now(),
         timerEnd: f.timerEnd ? Number(f.timerEnd) : null,
-        timerHours: f.timerHours || null
+        timerMinutes: f.timerMinutes ? Number(f.timerMinutes) : null
       })).sort((a,b) => b.createdAt - a.createdAt);
       setSyncStatus(true);
       render();
@@ -408,23 +612,35 @@ async function deleteField(id){
 async function renameField(id, name){
   await callApi({action:'rename', id, name: name.trim() || '未命名花田'});
 }
+async function setSpecies(id, species){
+  await callApi({action:'setSpecies', id, species: species.trim()});
+}
 async function toggleStage(id, key){
+  if(!adminMode) return;
   const f = fields.find(x=>x.id===id);
   if(f) f[key] = !f[key];
   render();
-  await callApi({action:'toggleStage', id, key});
+  const result = await callApi({action:'toggleStage', id, key, idToken: adminIdToken});
+  if(result && result.ok === false && result.error === 'unauthorized'){
+    toast('登入已過期，請重新登入管理員帳號');
+    adminMode = false;
+    adminIdToken = '';
+    try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
+    updateAdminUI();
+  }
   fetchFields();
 }
-async function startTimer(id, hours){
+async function startTimer(id, minutes){
   const f = fields.find(x=>x.id===id);
-  if(f){ f.timerEnd = Date.now() + hours*3600000; f.timerHours = hours; }
+  if(f){ f.timerEnd = Date.now() + minutes*60000; f.timerMinutes = minutes; }
+  customOpenIds.delete(id);
   render();
-  await callApi({action:'startTimer', id, hours});
+  await callApi({action:'startTimer', id, minutes});
   fetchFields();
 }
 async function clearTimer(id){
   const f = fields.find(x=>x.id===id);
-  if(f){ f.timerEnd = null; f.timerHours = null; }
+  if(f){ f.timerEnd = null; f.timerMinutes = null; }
   render();
   await callApi({action:'clearTimer', id});
   fetchFields();
@@ -433,6 +649,13 @@ async function clearTimer(id){
 function formatDate(ts){
   const d = new Date(ts);
   return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+function formatDuration(min){
+  const h = Math.floor(min/60);
+  const m = min%60;
+  if(h>0 && m>0) return `${h}小時${m}分`;
+  if(h>0) return `${h}小時`;
+  return `${m}分`;
 }
 function formatCountdown(ms){
   if(ms <= 0) return '00:00:00';
@@ -452,6 +675,7 @@ function cardTemplate(f){
   const hasTimer = !!f.timerEnd;
   const remaining = hasTimer ? f.timerEnd - Date.now() : 0;
   const timerDone = hasTimer && remaining <= 0;
+  const customOpen = customOpenIds.has(f.id);
 
   return `
   <div class="card ${timerDone ? 'ready':''}" data-id="${f.id}">
@@ -463,6 +687,7 @@ function cardTemplate(f){
       <button class="del-btn" data-role="delete" title="刪除花田">🗑</button>
     </div>
 
+    ${adminMode ? `
     <div class="bloom-track">
       <button class="stage ${f.harvest?'on':''}" data-role="stage" data-key="harvest" type="button">
         <div class="stage-icon">🧺</div>
@@ -479,11 +704,16 @@ function cardTemplate(f){
         <div class="stage-label">待取冰箱</div>
       </button>
     </div>
+    ` : ''}
+
+    <div class="species-row">
+      <input class="species-input" data-role="species" placeholder="🌱 花種（選填）" value="${escapeHtml(f.species)}" maxlength="20">
+    </div>
 
     <div class="timer-box">
       ${hasTimer ? `
         <div class="timer-active-row">
-          <span class="timer-label">冷藏倒數 · ${f.timerHours}小時</span>
+          <span class="timer-label">冷藏倒數 · ${formatDuration(f.timerMinutes)}</span>
           ${timerDone ? '<span class="ready-pill">可以取出了</span>' : `<button class="clear-btn" data-role="clear-timer">取消</button>`}
         </div>
         <div class="timer-display ${timerDone?'done':''}" data-role="countdown">${formatCountdown(remaining)}</div>
@@ -491,18 +721,20 @@ function cardTemplate(f){
       ` : `
         <span class="timer-label">冷藏倒數</span>
         <div class="preset-row">
-          ${PRESETS.map(h => `<button class="preset-btn" data-role="start-timer" data-hours="${h}">${h} 小時</button>`).join('')}
+          ${PRESETS.map(p => `<button class="preset-btn" data-role="start-timer" data-minutes="${p.minutes}">${p.label}</button>`).join('')}
         </div>
+        <button class="custom-toggle" data-role="toggle-custom" type="button">${customOpen ? '收起自訂倒數' : '⏱ 自訂倒數'}</button>
+        ${customOpen ? `
+        <div class="custom-row">
+          <input type="number" min="0" max="999" class="custom-input" data-role="custom-h" placeholder="0">
+          <span>時</span>
+          <input type="number" min="0" max="59" class="custom-input" data-role="custom-m" placeholder="0">
+          <span>分</span>
+          <button class="timer-btn" data-role="start-custom" type="button">開始</button>
+        </div>` : ''}
       `}
     </div>
   </div>`;
-}
-
-function renderEmptyNoApi(){
-  document.getElementById('grid').innerHTML = '';
-  const empty = document.getElementById('emptyState');
-  empty.style.display = 'block';
-  document.getElementById('emptyHint').textContent = '請先在右上角齒輪設定裡貼上 Web App 網址，即可開始新增花田。';
 }
 
 function render(){
@@ -533,15 +765,38 @@ function render(){
       renameField(e.target.closest('.card').dataset.id, e.target.value);
     });
   });
+  grid.querySelectorAll('[data-role="species"]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      setSpecies(e.target.closest('.card').dataset.id, e.target.value);
+    });
+  });
   grid.querySelectorAll('[data-role="start-timer"]').forEach(btn=>{
     btn.addEventListener('click', e=>{
       const card = e.target.closest('.card');
-      startTimer(card.dataset.id, Number(e.target.dataset.hours));
+      startTimer(card.dataset.id, Number(e.target.dataset.minutes));
     });
   });
   grid.querySelectorAll('[data-role="clear-timer"]').forEach(btn=>{
     btn.addEventListener('click', e=>{
       clearTimer(e.target.closest('.card').dataset.id);
+    });
+  });
+  grid.querySelectorAll('[data-role="toggle-custom"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const id = e.target.closest('.card').dataset.id;
+      if(customOpenIds.has(id)) customOpenIds.delete(id);
+      else customOpenIds.add(id);
+      render();
+    });
+  });
+  grid.querySelectorAll('[data-role="start-custom"]').forEach(btn=>{
+    btn.addEventListener('click', e=>{
+      const card = e.target.closest('.card');
+      const h = Number(card.querySelector('[data-role="custom-h"]').value) || 0;
+      const m = Number(card.querySelector('[data-role="custom-m"]').value) || 0;
+      const total = h*60 + m;
+      if(total <= 0){ toast('請輸入時或分'); return; }
+      startTimer(card.dataset.id, total);
     });
   });
 }
@@ -575,6 +830,7 @@ document.getElementById('newFieldName').addEventListener('keydown', e=>{
   if(e.key === 'Enter') document.getElementById('addBtn').click();
 });
 
+loadAdminState();
 loadApiUrl();
 startTicker();
 </script>
