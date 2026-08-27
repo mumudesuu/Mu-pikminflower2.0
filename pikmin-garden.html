@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌸皮克敏花田手記</title>
+<title>🌸 皮克敏花田手記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -32,7 +32,6 @@
   html{scroll-behavior:smooth;}
   body{
     margin:0;
-    font-family:"Zen Maru Gothic","Noto Sans TC",sans-serif;
     background:
       radial-gradient(circle at 8% 12%, rgba(255,201,60,.20), transparent 30%),
       radial-gradient(circle at 92% 10%, rgba(255,127,168,.18), transparent 32%),
@@ -428,6 +427,35 @@
   }
   .toast.show{opacity:1; transform:translateX(-50%) translateY(-6px);}
 
+  .harvest-log-section{
+    margin-top:30px;
+    background:var(--white);
+    border:2px solid var(--cream-deep);
+    border-radius:20px;
+    padding:20px 22px;
+    box-shadow:var(--card-shadow);
+  }
+  .log-title{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:17px;
+    color:var(--leaf-deep); margin:0 0 12px;
+  }
+  .log-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:0;}
+  .log-item{
+    display:flex; align-items:center; gap:10px;
+    padding:9px 0;
+    border-bottom:1px dashed var(--cream-deep);
+    font-size:13.5px;
+  }
+  .log-item:last-child{border-bottom:none;}
+  .log-icon{font-size:15px; flex-shrink:0;}
+  .log-text{flex:1; min-width:0; color:var(--ink);}
+  .log-text strong{font-family:'Baloo 2',sans-serif; font-weight:700;}
+  .log-species{color:#9AAB9F; font-weight:600;}
+  .log-time{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:11.5px;
+    color:#9AAB9F; flex-shrink:0;
+  }
+
   footer{text-align:center; color:#9AAB9F; font-size:12px; padding-top:24px;}
   @media (max-width:560px){
     header{padding:30px 18px 18px;}
@@ -478,6 +506,11 @@
     <div class="big">還沒有花田</div>
     <div id="emptyHint">新增第一塊花田，開始記錄採收進度吧。</div>
   </div>
+
+  <section class="harvest-log-section" id="harvestLogSection" style="display:none;">
+    <h2 class="log-title">🧺 沐沐採果紀錄</h2>
+    <ul class="log-list" id="harvestLogList"></ul>
+  </section>
 </main>
 
 <footer>🌼 沐光花語｜友田登記 · 皮克敏花田手記</footer>
@@ -508,6 +541,7 @@ const PRESETS = [
 let apiUrl = DEFAULT_API_URL;
 let fields = [];
 let initialLoading = true;
+let harvestLog = [];
 let pollHandle = null;
 let tickHandle = null;
 let adminMode = false;
@@ -572,7 +606,7 @@ async function handleCredentialResponse(response){
   if(isTokenValid(token)){
     adminIdToken = token;
     adminMode = true;
-    try{ await window.storage.set(ADMIN_TOKEN_KEY, token, false); }catch(e){}
+    try{ localStorage.setItem(ADMIN_TOKEN_KEY, token); }catch(e){}
     toast('已用管理員帳號登入');
     closeLoginModal();
     updateAdminUI();
@@ -582,11 +616,11 @@ async function handleCredentialResponse(response){
   }
 }
 
-async function loadAdminState(){
+function loadAdminState(){
   try{
-    const res = await window.storage.get(ADMIN_TOKEN_KEY, false);
-    if(res && res.value && isTokenValid(res.value)){
-      adminIdToken = res.value;
+    const token = localStorage.getItem(ADMIN_TOKEN_KEY);
+    if(token && isTokenValid(token)){
+      adminIdToken = token;
       adminMode = true;
     }
   }catch(e){}
@@ -611,12 +645,12 @@ function updateAdminUI(){
   render();
 }
 
-document.getElementById('adminToggle').addEventListener('click', async ()=>{
+document.getElementById('adminToggle').addEventListener('click', ()=>{
   if(adminMode){
     if(confirm('要登出管理員模式嗎？')){
       adminMode = false;
       adminIdToken = '';
-      try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
+      try{ localStorage.removeItem(ADMIN_TOKEN_KEY); }catch(e){}
       if(window.google) google.accounts.id.disableAutoSelect();
       updateAdminUI();
     }
@@ -661,9 +695,15 @@ async function fetchFields(){
         if(aKey !== bKey) return aKey - bKey;
         return b.createdAt - a.createdAt;
       });
+      harvestLog = (data.log || []).map(l => ({
+        fieldName: l.fieldName,
+        species: l.species || '',
+        timestamp: Number(l.timestamp) || 0
+      })).sort((a,b) => b.timestamp - a.timestamp);
       setSyncStatus(true);
       initialLoading = false;
       render();
+      renderHarvestLog();
     }
   }catch(e){
     setSyncStatus(false);
@@ -720,14 +760,16 @@ async function toggleStage(id, key){
   const result = await callApi({action:'toggleStage', id, key, idToken: adminIdToken});
   if(result && result.ok === false){
     if(f) f[key] = !f[key];
+    render();
     if(result.error === 'unauthorized'){
-      toast('登入已過期，請重新登入管理員帳號');
+      toast('驗證失敗：' + (result.reason || '未知原因'));
+      console.warn('toggleStage unauthorized, reason:', result.reason);
       adminMode = false;
       adminIdToken = '';
-      try{ await window.storage.set(ADMIN_TOKEN_KEY, '', false); }catch(e){}
+      try{ localStorage.removeItem(ADMIN_TOKEN_KEY); }catch(e){}
       updateAdminUI();
     }else{
-      render();
+      toast('操作失敗，請稍後再試');
     }
   }
 }
@@ -908,6 +950,31 @@ function render(){
       startTimer(card.dataset.id, total);
     });
   });
+}
+
+function formatLogTime(ts){
+  const d = new Date(ts);
+  return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function renderHarvestLog(){
+  const section = document.getElementById('harvestLogSection');
+  const list = document.getElementById('harvestLogList');
+  if(!harvestLog.length){
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  list.innerHTML = harvestLog.slice(0, 20).map(l => `
+    <li class="log-item">
+      <span class="log-icon">🧺</span>
+      <span class="log-text">
+        <strong>${escapeHtml(l.fieldName)}</strong>
+        ${l.species ? `<span class="log-species">・${escapeHtml(l.species)}</span>` : ''}
+      </span>
+      <span class="log-time">${formatLogTime(l.timestamp)}</span>
+    </li>
+  `).join('');
 }
 
 function startTicker(){
