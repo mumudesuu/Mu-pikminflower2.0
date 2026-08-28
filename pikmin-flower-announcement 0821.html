@@ -290,6 +290,27 @@
     margin-bottom: 8px;
   }
 
+  .path-box{
+    background: #EFEAF6;
+    border-color: #D3C4EE;
+    margin-top: -2px;
+  }
+  .path-box code{
+    color: #6B4A9A;
+    font-size:12px;
+  }
+  .path-label{
+    font-size:11px;
+    font-weight:800;
+    color:#8A6FBF;
+    flex-shrink:0;
+  }
+  .path-copy-btn{
+    background: var(--purple);
+    color:#fff;
+  }
+  .path-copy-btn:hover{ background:#9A6FDB;}
+
   .status-filter-bar{
     margin-top: -14px;
   }
@@ -511,6 +532,7 @@
     padding: 8px 10px 8px 14px;
     gap:8px;
     margin-bottom: 10px;
+    flex-wrap:wrap;
   }
   .coord-box code{
     font-family: "Baloo 2", monospace;
@@ -518,6 +540,8 @@
     color:#7A5A2C;
     font-weight:600;
     word-break: break-all;
+    flex:1;
+    min-width:80px;
   }
   .copy-btn{
     flex-shrink:0;
@@ -887,6 +911,7 @@
       seedlingCheckedAt: raw.seedlingCheckedAt ? Number(raw.seedlingCheckedAt) : null,
       budCheckedAt: raw.budCheckedAt ? Number(raw.budCheckedAt) : null,
       hidden: String(raw.hidden).toUpperCase() === 'TRUE',
+      pathUrl: raw.pathUrl || '', // 只有管理員登入時，後端才會回傳這個欄位；訪客拿到的資料裡本來就沒有它
     };
   }
 
@@ -1424,6 +1449,14 @@
         </div>
       ` : '';
 
+      const pathHtml = isAdmin ? `
+        <div class="coord-box path-box">
+          <span class="path-label">🔒 路徑</span>
+          <code>${f.pathUrl ? escapeHtml(f.pathUrl) : '（試算表尚未填寫）'}</code>
+          ${f.pathUrl ? `<button class="copy-btn path-copy-btn" type="button">複製路徑</button>` : ''}
+        </div>
+      ` : '';
+
       const hiddenBadge = (isAdmin && f.hidden)
         ? `<span class="hidden-badge">🙈 已隱藏（訪客看不到）</span>`
         : '';
@@ -1446,6 +1479,7 @@
           <code>${escapeHtml(f.coord)}</code>
           <button class="copy-btn" type="button">複製座標</button>
         </div>
+        ${pathHtml}
         <button class="share-btn" type="button">📤 複製收成資訊</button>
         <div class="note">
           ${f.notes.map(n => `<div>💬 ${escapeHtml(n)}</div>`).join("")}
@@ -1455,6 +1489,11 @@
 
       const copyBtn = card.querySelector('.copy-btn');
       copyBtn.addEventListener('click', () => copyCoord(f.coord, copyBtn));
+
+      const pathCopyBtn = card.querySelector('.path-copy-btn');
+      if(pathCopyBtn){
+        pathCopyBtn.addEventListener('click', () => copyCoord(f.pathUrl, pathCopyBtn));
+      }
 
       const shareBtn = card.querySelector('.share-btn');
       shareBtn.addEventListener('click', () => shareFieldInfo(f, shareBtn));
@@ -1611,7 +1650,7 @@
   }
 
   function copyCoord(text, btn){
-    const original = "複製座標";
+    const original = btn.textContent;
     copyToClipboard(text, () => {
       btn.textContent = "已複製 🌱";
       btn.classList.add('copied');
@@ -1646,6 +1685,13 @@
       '備註：',
       ...f.notes.map(n => `💬 ${n}`),
     ];
+
+    // 路徑是管理員專用資料：訪客拿到的 f 物件本來就沒有 pathUrl，
+    // 這裡再加一層 isAdmin 判斷做雙重保險，訪客複製時絕對不會出現這一行。
+    if(isAdmin){
+      lines.push('');
+      lines.push(`路徑：${f.pathUrl || ''}`);
+    }
 
     return lines.join('\n');
   }
