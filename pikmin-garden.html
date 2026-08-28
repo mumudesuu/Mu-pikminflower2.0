@@ -723,6 +723,14 @@ function startPolling(){
   pollHandle = setInterval(fetchFields, 6000);
 }
 
+function isEditingField(){
+  const el = document.activeElement;
+  if(!el || !el.closest) return false;
+  const inGrid = el.closest('#grid');
+  const inAddBar = el.closest('.add-bar');
+  return (inGrid || inAddBar) && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+}
+
 async function fetchFields(){
   if(!apiUrl) return;
   try{
@@ -757,13 +765,13 @@ async function fetchFields(){
       })).sort((a,b) => b.timestamp - a.timestamp);
       setSyncStatus(true);
       initialLoading = false;
-      render();
+      if(!isEditingField()) render();
       renderHarvestLog();
     }
   }catch(e){
     setSyncStatus(false);
     initialLoading = false;
-    render();
+    if(!isEditingField()) render();
   }
 }
 
@@ -1167,6 +1175,11 @@ document.getElementById('addBtn').addEventListener('click', ()=>{
 });
 document.getElementById('newFieldName').addEventListener('keydown', e=>{
   if(e.key === 'Enter') document.getElementById('addBtn').click();
+});
+document.getElementById('grid').addEventListener('focusout', e=>{
+  if(e.target.tagName === 'INPUT'){
+    setTimeout(()=>{ if(!isEditingField()) render(); }, 0);
+  }
 });
 document.querySelectorAll('[data-role="filter"]').forEach(btn=>{
   btn.addEventListener('click', e=>{
