@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🌸 皮克敏花田手記</title>
+<title>皮克敏花田手記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -526,7 +526,7 @@
   <div>
     <p class="brand-eyebrow">花田管理 · 種花紀錄</p>
     <h1>🌸 皮克敏<span>花田</span>手記</h1>
-    <p class="sub">記錄花田與冷藏倒數，訪客也能新增花田、設定倒數。</p>
+    <p class="sub">記錄花田與冷藏倒數，訪客也能新增花田、設定倒數；已採果／已冰冰箱／待取冰箱僅管理員可標記。</p>
   </div>
   <div class="head-actions">
     <span class="sync-pill off" id="syncPill"><span class="dot"></span>尚未連接</span>
@@ -1177,8 +1177,9 @@ document.getElementById('newFieldName').addEventListener('keydown', e=>{
   if(e.key === 'Enter') document.getElementById('addBtn').click();
 });
 document.getElementById('grid').addEventListener('focusout', e=>{
-  if(e.target.tagName === 'INPUT'){
-    setTimeout(()=>{ if(!isEditingField()) render(); }, 0);
+  const role = e.target.dataset ? e.target.dataset.role : null;
+  if(e.target.tagName === 'INPUT' && (role === 'name' || role === 'species')){
+    setTimeout(()=>{ if(!isEditingField()) render(); }, 150);
   }
 });
 document.querySelectorAll('[data-role="filter"]').forEach(btn=>{
