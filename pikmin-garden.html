@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>皮克敏花田手記</title>
+<title>🌸 皮克敏花田手記</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -597,6 +597,17 @@ let adminIdToken = '';
 let customOpenIds = new Set();
 let hiddenCustomOpenIds = new Set();
 let currentFilter = 'all';
+let pendingWrites = {};
+
+function markPending(id, keys){
+  if(!pendingWrites[id]) pendingWrites[id] = new Set();
+  keys.forEach(k => pendingWrites[id].add(k));
+}
+function clearPending(id, keys){
+  if(!pendingWrites[id]) return;
+  keys.forEach(k => pendingWrites[id].delete(k));
+  if(pendingWrites[id].size === 0) delete pendingWrites[id];
+}
 
 function toast(msg){
   const t = document.getElementById('toast');
@@ -739,20 +750,29 @@ async function fetchFields(){
     const res = await fetch(url);
     const data = await res.json();
     if(data.ok){
-      fields = data.fields.map(f => ({
-        id: f.id,
-        name: f.name,
-        species: f.species || '',
-        category: f.category || '其他',
-        harvest: f.harvest === true || f.harvest === 'TRUE',
-        fridge: f.fridge === true || f.fridge === 'TRUE',
-        ready: f.ready === true || f.ready === 'TRUE',
-        createdAt: Number(f.createdAt) || Date.now(),
-        timerEnd: f.timerEnd ? Number(f.timerEnd) : null,
-        timerMinutes: f.timerMinutes ? Number(f.timerMinutes) : null,
-        hiddenTimerEnd: f.hiddenTimerEnd ? Number(f.hiddenTimerEnd) : null,
-        hiddenTimerMinutes: f.hiddenTimerMinutes ? Number(f.hiddenTimerMinutes) : null
-      })).sort((a,b) => {
+      fields = data.fields.map(f => {
+        const merged = {
+          id: f.id,
+          name: f.name,
+          species: f.species || '',
+          category: f.category || '其他',
+          harvest: f.harvest === true || f.harvest === 'TRUE',
+          fridge: f.fridge === true || f.fridge === 'TRUE',
+          ready: f.ready === true || f.ready === 'TRUE',
+          createdAt: Number(f.createdAt) || Date.now(),
+          timerEnd: f.timerEnd ? Number(f.timerEnd) : null,
+          timerMinutes: f.timerMinutes ? Number(f.timerMinutes) : null,
+          hiddenTimerEnd: f.hiddenTimerEnd ? Number(f.hiddenTimerEnd) : null,
+          hiddenTimerMinutes: f.hiddenTimerMinutes ? Number(f.hiddenTimerMinutes) : null
+        };
+        if(pendingWrites[f.id]){
+          const existing = fields.find(x => x.id === f.id);
+          if(existing){
+            pendingWrites[f.id].forEach(key => { merged[key] = existing[key]; });
+          }
+        }
+        return merged;
+      }).sort((a,b) => {
         const aKey = a.timerEnd !== null ? a.timerEnd : Infinity;
         const bKey = b.timerEnd !== null ? b.timerEnd : Infinity;
         if(aKey !== bKey) return aKey - bKey;
@@ -819,15 +839,19 @@ async function setSpecies(id, species){
 async function setCategory(id, category){
   const f = fields.find(x=>x.id===id);
   if(f) f.category = category;
+  markPending(id, ['category']);
   render();
-  callApi({action:'setCategory', id, category});
+  await callApi({action:'setCategory', id, category});
+  clearPending(id, ['category']);
 }
 async function toggleStage(id, key){
   if(!adminMode) return;
   const f = fields.find(x=>x.id===id);
   if(f) f[key] = !f[key];
+  markPending(id, [key]);
   render();
   const result = await callApi({action:'toggleStage', id, key, idToken: adminIdToken});
+  clearPending(id, [key]);
   if(result && result.ok === false){
     if(f) f[key] = !f[key];
     render();
@@ -847,22 +871,28 @@ async function startTimer(id, minutes){
   const f = fields.find(x=>x.id===id);
   if(f){ f.timerEnd = Date.now() + minutes*60000; f.timerMinutes = minutes; }
   customOpenIds.delete(id);
+  markPending(id, ['timerEnd','timerMinutes']);
   render();
-  callApi({action:'startTimer', id, minutes});
+  await callApi({action:'startTimer', id, minutes});
+  clearPending(id, ['timerEnd','timerMinutes']);
 }
 async function clearTimer(id){
   const f = fields.find(x=>x.id===id);
   if(f){ f.timerEnd = null; f.timerMinutes = null; }
+  markPending(id, ['timerEnd','timerMinutes']);
   render();
-  callApi({action:'clearTimer', id});
+  await callApi({action:'clearTimer', id});
+  clearPending(id, ['timerEnd','timerMinutes']);
 }
 async function startHiddenTimer(id, minutes){
   if(!adminMode) return;
   const f = fields.find(x=>x.id===id);
   if(f){ f.hiddenTimerEnd = Date.now() + minutes*60000; f.hiddenTimerMinutes = minutes; }
   hiddenCustomOpenIds.delete(id);
+  markPending(id, ['hiddenTimerEnd','hiddenTimerMinutes']);
   render();
   const result = await callApi({action:'startHiddenTimer', id, minutes, idToken: adminIdToken});
+  clearPending(id, ['hiddenTimerEnd','hiddenTimerMinutes']);
   if(result && result.ok === false && result.error === 'unauthorized'){
     toast('驗證失敗：' + (result.reason || '未知原因'));
     adminMode = false;
@@ -875,8 +905,10 @@ async function clearHiddenTimer(id){
   if(!adminMode) return;
   const f = fields.find(x=>x.id===id);
   if(f){ f.hiddenTimerEnd = null; f.hiddenTimerMinutes = null; }
+  markPending(id, ['hiddenTimerEnd','hiddenTimerMinutes']);
   render();
   const result = await callApi({action:'clearHiddenTimer', id, idToken: adminIdToken});
+  clearPending(id, ['hiddenTimerEnd','hiddenTimerMinutes']);
   if(result && result.ok === false && result.error === 'unauthorized'){
     toast('驗證失敗：' + (result.reason || '未知原因'));
     adminMode = false;
