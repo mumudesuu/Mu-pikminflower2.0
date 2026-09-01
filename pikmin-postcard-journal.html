@@ -7,54 +7,78 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
-    --cream:#FFF6E8;
-    --cream-deep:#FBE9CC;
-    --leaf:#3E9166;
-    --leaf-deep:#276148;
-    --ink:#2B4636;
-    --pink:#FF7FA8;
-    --pink-deep:#E85D8D;
-    --pink-bg:#FFEDF3;
-    --mush:#E0A438;
-    --mush-deep:#B9820A;
-    --mush-bg:#FFF6DC;
-    --purple:#B080E0;
-    --purple-deep:#6B4A9A;
-    --purple-bg:#F5F0FA;
-    --sky:#5FC1DE;
+    --cream:#FFF6E8; --cream-deep:#FBE9CC;
+    --leaf:#3E9166; --leaf-deep:#276148; --ink:#2B4636;
+    --pink:#FF7FA8; --pink-deep:#E85D8D; --pink-bg:#FFEDF3;
+    --mush:#E0A438; --mush-deep:#B9820A; --mush-bg:#FFF6DC;
+    --purple:#B080E0; --purple-deep:#6B4A9A; --purple-bg:#F5F0FA;
     --white:#FFFFFF;
     --card-shadow: 0 6px 0 rgba(39,97,72,0.14);
   }
   *{box-sizing:border-box;}
   html{scroll-behavior:smooth;}
   body{
-    margin:0;
-    font-family:"Zen Maru Gothic","Noto Sans TC",sans-serif;
+    margin:0; font-family:"Zen Maru Gothic","Noto Sans TC",sans-serif;
     background:
       radial-gradient(circle at 10% 12%, rgba(255,201,60,0.18), transparent 40%),
       radial-gradient(circle at 92% 8%, rgba(255,127,168,0.16), transparent 45%),
       radial-gradient(circle at 50% 95%, rgba(95,193,222,0.15), transparent 40%),
       var(--cream);
-    color:var(--ink);
-    min-height:100vh;
+    color:var(--ink); min-height:100vh;
   }
   @media (prefers-reduced-motion: reduce){
     *{ animation-duration:.01ms !important; animation-iteration-count:1 !important; transition-duration:.01ms !important; }
   }
 
+  /* ---------- password gate ---------- */
+  .pw-overlay{
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    background:
+      radial-gradient(circle at 10% 12%, rgba(255,201,60,0.18), transparent 40%),
+      radial-gradient(circle at 92% 8%, rgba(255,127,168,0.16), transparent 45%),
+      var(--cream);
+    padding:20px;
+  }
+  .pw-box{
+    background:var(--white); border-radius:24px; padding:34px 30px; max-width:320px; width:100%;
+    text-align:center; box-shadow:0 10px 0 rgba(39,97,72,.18);
+  }
+  .pw-box .emoji{ font-size:42px; }
+  .pw-box h2{ font-family:"Baloo 2",sans-serif; color:var(--leaf-deep); margin:6px 0 4px; font-size:21px; }
+  .pw-box p{ font-size:13px; color:#7C9686; margin:0 0 18px; }
+  .pw-box input{
+    width:100%; text-align:center; letter-spacing:6px; font-family:"Baloo 2",monospace; font-size:19px;
+    padding:11px 12px; border-radius:14px; border:2px solid #D9E8DD; outline:none; margin-bottom:8px;
+  }
+  .pw-box input:focus{ border-color:var(--leaf); }
+  .pw-err{ color:#D8464E; font-size:12px; font-weight:700; min-height:16px; margin-bottom:8px; }
+  .pw-err.shake{ animation:shake .35s; }
+  @keyframes shake{ 0%,100%{transform:translateX(0);} 25%{transform:translateX(-6px);} 75%{transform:translateX(6px);} }
+
+  .app-root{ display:none; }
+
   /* ---------- decorative drifting icons ---------- */
   .drift{ position:fixed; pointer-events:none; z-index:0; opacity:.5; animation:drift 9s ease-in-out infinite; font-size:clamp(20px,3vw,30px); }
-  .drift.d1{ top:8%; left:3%; animation-delay:0s; }
-  .drift.d2{ top:70%; left:2%; animation-delay:1.5s; }
-  .drift.d3{ top:18%; right:4%; animation-delay:.7s; }
-  .drift.d4{ top:78%; right:5%; animation-delay:2.2s; }
+  .drift.d1{ top:8%; left:3%; animation-delay:0s; } .drift.d2{ top:70%; left:2%; animation-delay:1.5s; }
+  .drift.d3{ top:18%; right:4%; animation-delay:.7s; } .drift.d4{ top:78%; right:5%; animation-delay:2.2s; }
   @keyframes drift{ 0%,100%{ transform:translateY(0) rotate(-4deg);} 50%{ transform:translateY(-20px) rotate(6deg);} }
 
-  .wrap{ position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:28px 20px 90px; }
+  .wrap{ position:relative; z-index:1; max-width:1180px; margin:0 auto; padding:20px 20px 90px; }
 
-  /* ---------- header ---------- */
+  /* ---------- account bar ---------- */
+  .account-bar{ display:flex; justify-content:flex-end; align-items:center; gap:10px; min-height:36px; margin-bottom:6px; }
+  .account-chip{
+    display:flex; align-items:center; gap:8px; background:var(--white); border-radius:999px; padding:5px 14px 5px 6px;
+    box-shadow:0 3px 0 rgba(43,70,54,.12); font-size:12.5px; font-weight:700; color:var(--ink);
+  }
+  .account-chip .avatar{ width:24px; height:24px; border-radius:50%; background:var(--leaf); color:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; }
+  .account-chip .admin-tag{ background:var(--mush); color:#fff; font-size:10.5px; padding:2px 8px; border-radius:999px; }
+  .account-chip button{ border:none; background:transparent; color:#A6947A; cursor:pointer; font-size:11.5px; font-weight:700; padding:2px; }
+  #gsiButton{ display:inline-block; }
+
   .bloom-strip{ display:flex; justify-content:center; gap:10px; margin-bottom:6px; flex-wrap:wrap; }
   .bloom-strip span{ display:inline-block; font-size:clamp(17px,2.3vw,24px); transform:scale(0); animation:bloom-pop .6s cubic-bezier(.34,1.56,.64,1) forwards; }
   .bloom-strip span:nth-child(1){animation-delay:.05s;} .bloom-strip span:nth-child(2){animation-delay:.15s;}
@@ -76,8 +100,8 @@
     border:2px dashed var(--leaf); color:var(--leaf-deep); padding:7px 18px; border-radius:999px;
     font-size:13px; font-weight:700;
   }
+  .backend-hint{ margin-top:8px; font-size:11.5px; color:#A6947A; }
 
-  /* ---------- controls ---------- */
   .controls{ margin:26px 0 22px; display:flex; flex-direction:column; gap:14px; align-items:center; }
   .search-wrap{ position:relative; width:min(480px, 100%); }
   .search-wrap input{
@@ -95,8 +119,7 @@
     box-shadow:0 3px 0 rgba(43,70,54,.15); display:inline-flex; align-items:center; gap:6px;
     transition:transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
   }
-  .chip:hover{ transform:translateY(-2px); }
-  .chip:active{ transform:translateY(1px); }
+  .chip:hover{ transform:translateY(-2px); } .chip:active{ transform:translateY(1px); }
   .chip.active[data-cat="all"]{ background:var(--leaf); color:#fff; box-shadow:0 3px 0 var(--leaf-deep); }
   .chip.active[data-cat="flower"]{ background:var(--pink); color:#fff; box-shadow:0 3px 0 var(--pink-deep); }
   .chip.active[data-cat="mushroom"]{ background:var(--mush); color:#fff; box-shadow:0 3px 0 var(--mush-deep); }
@@ -111,7 +134,6 @@
   .add-btn:hover{ transform:translateY(-2px); }
   .add-btn:active{ transform:translateY(2px); box-shadow:0 1px 0 rgba(39,97,72,.35); }
 
-  /* ---------- grid ---------- */
   .grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:20px; }
   .card{
     background:var(--white); border-radius:22px; overflow:hidden; box-shadow:var(--card-shadow);
@@ -129,10 +151,10 @@
   }
   .card-body{ padding:14px 16px 16px; display:flex; flex-direction:column; gap:10px; flex:1; }
 
-  .badge{ align-self:flex-start; font-size:11.5px; font-weight:800; padding:5px 12px; border-radius:999px; color:#fff; }
-  .badge.flower{ background:var(--pink); }
-  .badge.mushroom{ background:var(--mush); }
-  .badge.hidden{ background:var(--purple); }
+  .tag-row{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .badge{ font-size:11.5px; font-weight:800; padding:5px 12px; border-radius:999px; color:#fff; }
+  .badge.flower{ background:var(--pink); } .badge.mushroom{ background:var(--mush); } .badge.hidden{ background:var(--purple); }
+  .country-tag{ font-size:11.5px; font-weight:700; padding:5px 10px; border-radius:999px; background:#EFF7F1; color:var(--leaf-deep); }
 
   .coord-box{
     display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap;
@@ -148,15 +170,15 @@
   .copy-btn:active{ transform:translateY(1px) scale(.95); }
   .copy-btn.copied{ background:var(--leaf); color:#fff; }
 
-  .desc{
-    font-size:13.5px; color:#6B7C71; line-height:1.6; margin:0;
-    display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden;
-  }
+  .desc{ font-size:13.5px; color:#6B7C71; line-height:1.6; margin:0; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
 
-  .card-footer{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px dashed #E5DFD0; }
-  .obtained-label{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; cursor:pointer; color:#8A9A8E; user-select:none; }
+  .card-footer{ margin-top:auto; display:flex; align-items:center; justify-content:space-between; padding-top:8px; border-top:1px dashed #E5DFD0; gap:6px; flex-wrap:wrap; }
+  .obtained-label{ display:flex; align-items:center; gap:6px; font-size:13px; font-weight:700; color:#8A9A8E; user-select:none; }
+  .obtained-label.editable{ cursor:pointer; }
   .obtained-label.on{ color:var(--leaf-deep); }
-  .obtained-label input{ accent-color:var(--leaf); width:16px; height:16px; cursor:pointer; }
+  .obtained-label input{ accent-color:var(--leaf); width:16px; height:16px; }
+  .obtained-label input:not(:disabled){ cursor:pointer; }
+  .obtained-label input:disabled{ cursor:not-allowed; opacity:.7; }
   .del-btn{ border:none; background:transparent; color:#C4B8A5; cursor:pointer; font-size:12px; padding:4px; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; }
   .del-btn:hover{ color:#D8464E; }
 
@@ -164,7 +186,6 @@
   .empty-state .emoji{ font-size:40px; display:block; margin-bottom:10px; }
   .empty-state .title{ font-family:"Baloo 2",sans-serif; font-size:19px; color:var(--leaf-deep); margin-bottom:6px; font-weight:700; }
 
-  /* ---------- modal ---------- */
   .overlay{ position:fixed; inset:0; background:rgba(43,70,54,.45); z-index:50; display:flex; align-items:center; justify-content:center; padding:20px; }
   .modal{ background:var(--cream); border-radius:24px; width:100%; max-width:440px; max-height:90vh; overflow-y:auto; padding:26px 24px; box-shadow:0 10px 0 rgba(39,97,72,.18); }
   .modal h2{ font-family:"Baloo 2",sans-serif; color:var(--leaf-deep); margin:0 0 4px; font-size:21px; }
@@ -179,6 +200,10 @@
   .field input[type=text]:focus, .field textarea:focus{ border-color:var(--leaf); }
   .field textarea{ resize:vertical; min-height:60px; }
   .field .hint{ font-size:11px; color:#A6947A; margin-top:5px; }
+  .country-field-row{ display:flex; align-items:center; gap:8px; }
+  .country-field-row input{ flex:1; }
+  .country-spinner{ font-size:12px; color:#A6947A; flex-shrink:0; display:none; }
+  .country-spinner.show{ display:block; }
 
   .cat-choice{ display:flex; gap:8px; }
   .cat-choice button{
@@ -213,42 +238,57 @@
     font-weight:700; opacity:0; pointer-events:none; transition:.2s ease; z-index:80; font-family:"Zen Maru Gothic",sans-serif;
   }
   .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
-
   .loading{ text-align:center; padding:100px 20px; color:#7C9686; font-weight:600; }
 </style>
 </head>
 <body>
 
-<span class="drift d1">🌸</span>
-<span class="drift d2">🍄</span>
-<span class="drift d3">🍃</span>
-<span class="drift d4">✨</span>
-
-<div class="wrap">
-  <header>
-    <div class="bloom-strip"><span>🌸</span><span>🍄</span><span>🗺️</span><span>📍</span><span>✨</span></div>
-    <div class="mascot">🧭</div>
-    <h1>地圖手帳</h1>
-    <p class="sub">上傳明信片、記錄座標，追蹤你收集到的花點、菇點與隱藏點</p>
-    <div class="stat-pill" id="statPill">載入中…</div>
-  </header>
-
-  <div class="controls">
-    <div class="search-wrap">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C7B6A" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
-      <input type="text" id="searchInput" placeholder="搜尋關鍵字、地點說明或座標…">
-    </div>
-    <div class="filter-bar" id="catFilters">
-      <button class="chip active" data-cat="all">🌈 全部</button>
-      <button class="chip" data-cat="flower">🌸 花點</button>
-      <button class="chip" data-cat="mushroom">🍄 菇點</button>
-      <button class="chip" data-cat="hidden">✨ 隱藏點</button>
-    </div>
-    <button class="add-btn" id="openAdd">＋ 新增地點</button>
+<!-- ---------- password gate ---------- -->
+<div class="pw-overlay" id="pwOverlay">
+  <div class="pw-box">
+    <div class="emoji">🔒</div>
+    <h2>地圖手帳</h2>
+    <p>請輸入通關密碼</p>
+    <input type="password" id="pwInput" inputmode="numeric" placeholder="••••••" maxlength="12">
+    <div class="pw-err" id="pwErr"></div>
+    <button class="btn primary" id="pwSubmit" type="button" style="width:100%;">進入</button>
   </div>
+</div>
 
-  <div id="loadingState" class="loading">載入中…</div>
-  <div class="grid" id="grid" style="display:none;"></div>
+<div class="app-root" id="appRoot">
+  <span class="drift d1">🌸</span><span class="drift d2">🍄</span><span class="drift d3">🍃</span><span class="drift d4">✨</span>
+
+  <div class="wrap">
+    <div class="account-bar" id="accountBar">
+      <div id="gsiButton"></div>
+    </div>
+
+    <header>
+      <div class="bloom-strip"><span>🌸</span><span>🍄</span><span>🗺️</span><span>📍</span><span>✨</span></div>
+      <div class="mascot">🧭</div>
+      <h1>地圖手帳</h1>
+      <p class="sub">上傳明信片、記錄座標，追蹤你收集到的花點、菇點與隱藏點</p>
+      <div class="stat-pill" id="statPill">載入中…</div>
+      <div class="backend-hint" id="backendHint"></div>
+    </header>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#5C7B6A" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input type="text" id="searchInput" placeholder="搜尋關鍵字、國家、地點說明或座標…">
+      </div>
+      <div class="filter-bar" id="catFilters">
+        <button class="chip active" data-cat="all">🌈 全部</button>
+        <button class="chip" data-cat="flower">🌸 花點</button>
+        <button class="chip" data-cat="mushroom">🍄 菇點</button>
+        <button class="chip" data-cat="hidden">✨ 隱藏點</button>
+      </div>
+      <button class="add-btn" id="openAdd" type="button">＋ 新增地點</button>
+    </div>
+
+    <div id="loadingState" class="loading">載入中…</div>
+    <div class="grid" id="grid" style="display:none;"></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -256,268 +296,492 @@
 
 <script>
 (function(){
-  const CATS = { flower:{label:'花點', icon:'🌸'}, mushroom:{label:'菇點', icon:'🍄'}, hidden:{label:'隱藏點', icon:'✨'} };
+  // =========================================================
+  // 設定區
+  // =========================================================
+  const CORRECT_PASSWORD = '130807';
 
-  let posts = [];
-  let obtained = {};
-  let activeCat = 'all';
-  let searchTerm = '';
+  // Google Apps Script 網頁應用程式網址（結尾 /exec）
+  const API_URL = 'https://script.google.com/macros/s/AKfycby-YenMxweDIhbkNs8HUowGJPtvxOUuzpbVoRsTuV0QnbsA6Y6mR1nS5wRm-u9ix_nP6g/exec';
 
-  const grid = document.getElementById('grid');
-  const loadingState = document.getElementById('loadingState');
-  const statPill = document.getElementById('statPill');
-  const toastEl = document.getElementById('toast');
+  // 管理員信箱：只有用這個 Google 帳號登入，才能勾選「沐沐已取得」
+  const ADMIN_EMAIL = 'sandy36095@gmail.com';
 
-  function showToast(msg){
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    setTimeout(()=>toastEl.classList.remove('show'), 1600);
-  }
-  function escapeHtml(s){
-    return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  // Google OAuth Client ID，需跟 apps-script-backend.gs 裡的 GOOGLE_CLIENT_ID 填同一組。
+  const GOOGLE_CLIENT_ID = '1001037373208-3sdt3t6aekf1v0efidd53ob62m92t2nl.apps.googleusercontent.com';
 
-  async function loadData(){
-    try{
-      const p = await window.storage.get('postcards', true);
-      posts = p && p.value ? JSON.parse(p.value) : [];
-    }catch(e){ posts = []; }
-    try{
-      const o = await window.storage.get('obtained-status', false);
-      obtained = o && o.value ? JSON.parse(o.value) : {};
-    }catch(e){ obtained = {}; }
-    loadingState.style.display = 'none';
-    grid.style.display = 'grid';
-    render();
-  }
-  async function savePosts(){
-    try{ await window.storage.set('postcards', JSON.stringify(posts), true); }
-    catch(e){ showToast('儲存失敗，請稍後再試'); }
-  }
-  async function saveObtained(){
-    try{ await window.storage.set('obtained-status', JSON.stringify(obtained), false); }
-    catch(e){ showToast('儲存失敗，請稍後再試'); }
-  }
+  // =========================================================
+  // 密碼鎖
+  // =========================================================
+  const pwOverlay = document.getElementById('pwOverlay');
+  const pwInput = document.getElementById('pwInput');
+  const pwErr = document.getElementById('pwErr');
+  const appRoot = document.getElementById('appRoot');
 
-  function matchesFilters(post){
-    if(activeCat !== 'all' && post.cat !== activeCat) return false;
-    if(searchTerm){
-      const hay = (post.desc + ' ' + post.coords).toLowerCase();
-      if(!hay.includes(searchTerm.toLowerCase())) return false;
+  function unlockApp(){
+    pwOverlay.style.display = 'none';
+    appRoot.style.display = 'block';
+    initApp();
+  }
+  function tryUnlock(){
+    if(pwInput.value === CORRECT_PASSWORD){
+      localStorage.setItem('mapJournalAuth', '1');
+      unlockApp();
+    } else {
+      pwErr.textContent = '密碼錯誤，請再試一次';
+      pwErr.classList.remove('shake'); void pwErr.offsetWidth; pwErr.classList.add('shake');
+      pwInput.value = '';
     }
-    return true;
+  }
+  document.getElementById('pwSubmit').addEventListener('click', tryUnlock);
+  pwInput.addEventListener('keydown', (e) => { if(e.key === 'Enter') tryUnlock(); });
+
+  if(localStorage.getItem('mapJournalAuth') === '1'){
+    unlockApp();
+  } else {
+    pwInput.focus();
   }
 
-  function render(){
-    const filtered = posts.filter(matchesFilters);
-    const gotCount = posts.filter(p => obtained[p.id]).length;
-    statPill.textContent = `🌱 共 ${posts.length} 個地點・已取得 ${gotCount} 個` + (filtered.length !== posts.length ? `・顯示 ${filtered.length} 個` : '');
+  // =========================================================
+  // 主程式（解鎖後才會執行）
+  // =========================================================
+  function initApp(){
+    const CATS = { flower:{label:'花點', icon:'🌸'}, mushroom:{label:'菇點', icon:'🍄'}, hidden:{label:'隱藏點', icon:'✨'} };
 
-    if(filtered.length === 0){
-      grid.innerHTML = `
-        <div class="empty-state">
-          <span class="emoji">${posts.length === 0 ? '🗺️' : '🔍'}</span>
-          <div class="title">${posts.length === 0 ? '還沒有任何地點' : '沒有符合條件的地點'}</div>
-          <div>${posts.length === 0 ? '點上方「＋ 新增地點」開始建立你的第一筆紀錄' : '試試看調整搜尋關鍵字或篩選條件'}</div>
-        </div>`;
-      return;
+    let posts = [];
+    let obtainedMap = {}; // 僅在「暫存模式」使用
+    let currentUser = null; // { email, name, idToken }
+
+    let activeCat = 'all';
+    let searchTerm = '';
+
+    const grid = document.getElementById('grid');
+    const loadingState = document.getElementById('loadingState');
+    const statPill = document.getElementById('statPill');
+    const backendHint = document.getElementById('backendHint');
+    const toastEl = document.getElementById('toast');
+    const accountBar = document.getElementById('accountBar');
+
+    backendHint.textContent = API_URL
+      ? '🌐 已連接雲端試算表，所有裝置都會看到同一份資料'
+      : '💻 尚未連接後端，目前為暫存模式（重新整理或換裝置可能會遺失）';
+
+    function showToast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(()=>toastEl.classList.remove('show'), 1600);
+    }
+    function escapeHtml(s){
+      return (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+    function isAdmin(){ return !!currentUser && currentUser.email === ADMIN_EMAIL; }
+
+    // ---------- Google 登入 ----------
+    function decodeJwt(token){
+      try{
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+        const json = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+        return JSON.parse(json);
+      }catch(e){ return {}; }
     }
 
-    grid.innerHTML = filtered.map((post, i) => {
-      const isGot = !!obtained[post.id];
-      const img = post.img
-        ? `<img class="thumb" src="${post.img}" alt="明信片">`
-        : `<div class="thumb-empty">🌱 未提供圖片</div>`;
-      return `
-      <div class="card" data-id="${post.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
-        ${img}
-        <div class="card-body">
-          <span class="badge ${post.cat}">${CATS[post.cat].icon} ${CATS[post.cat].label}</span>
-          <div class="coord-box">
-            <code>${escapeHtml(post.coords)}</code>
-            <button class="copy-btn" data-action="copy" type="button">📋 複製</button>
+    function renderAccountBar(){
+      if(!GOOGLE_CLIENT_ID){
+        accountBar.innerHTML = `<span style="font-size:11px;color:#A6947A;">尚未設定管理員登入，目前任何人都能勾選「沐沐已取得」</span>`;
+        return;
+      }
+      if(currentUser){
+        accountBar.innerHTML = `
+          <div class="account-chip">
+            <div class="avatar">${escapeHtml((currentUser.name||currentUser.email||'?')[0])}</div>
+            <span>${escapeHtml(currentUser.name || currentUser.email)}</span>
+            ${isAdmin() ? '<span class="admin-tag">管理員</span>' : ''}
+            <button id="logoutBtn" type="button">登出</button>
+          </div>`;
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+          currentUser = null;
+          sessionStorage.removeItem('mapJournalIdToken');
+          renderAccountBar();
+          render();
+        });
+      } else {
+        accountBar.innerHTML = `<div id="gsiButton"></div>`;
+        if(window.google && google.accounts){
+          google.accounts.id.renderButton(document.getElementById('gsiButton'), { theme:'outline', size:'medium', shape:'pill', text:'signin' });
+        }
+      }
+    }
+
+    function handleCredentialResponse(response){
+      const payload = decodeJwt(response.credential);
+      currentUser = { email: payload.email, name: payload.name, idToken: response.credential };
+      sessionStorage.setItem('mapJournalIdToken', response.credential);
+      renderAccountBar();
+      render();
+    }
+    window.__mapJournalCredentialHandler = handleCredentialResponse;
+
+    function initGoogleSignIn(){
+      if(!GOOGLE_CLIENT_ID) { renderAccountBar(); return; }
+      const savedToken = sessionStorage.getItem('mapJournalIdToken');
+      if(savedToken){
+        const payload = decodeJwt(savedToken);
+        if(payload.exp && payload.exp * 1000 > Date.now()){
+          currentUser = { email: payload.email, name: payload.name, idToken: savedToken };
+        } else {
+          sessionStorage.removeItem('mapJournalIdToken');
+        }
+      }
+      const trySetup = () => {
+        if(window.google && google.accounts && google.accounts.id){
+          google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleCredentialResponse });
+          renderAccountBar();
+        } else {
+          setTimeout(trySetup, 200);
+        }
+      };
+      trySetup();
+    }
+
+    // ---------- data loading ----------
+    async function loadPosts(){
+      if(API_URL){
+        try{
+          const res = await fetch(`${API_URL}?action=list`);
+          const data = await res.json();
+          if(data.ok) posts = data.posts;
+        }catch(e){ showToast('讀取失敗，請檢查後端網址'); posts = []; }
+      } else {
+        try{
+          const p = await window.storage.get('postcards', true);
+          posts = p && p.value ? JSON.parse(p.value) : [];
+        }catch(e){ posts = []; }
+        try{
+          const o = await window.storage.get('obtained-status', false);
+          obtainedMap = o && o.value ? JSON.parse(o.value) : {};
+        }catch(e){ obtainedMap = {}; }
+        posts.forEach(p => { p.obtained = !!obtainedMap[p.id]; });
+      }
+      loadingState.style.display = 'none';
+      grid.style.display = 'grid';
+      render();
+    }
+    async function savePostsLocal(){
+      if(API_URL) return;
+      try{ await window.storage.set('postcards', JSON.stringify(posts), true); }
+      catch(e){ showToast('儲存失敗，請稍後再試'); }
+    }
+    async function saveObtainedLocal(){
+      if(API_URL) return;
+      try{ await window.storage.set('obtained-status', JSON.stringify(obtainedMap), false); }
+      catch(e){ showToast('儲存失敗，請稍後再試'); }
+    }
+
+    // ---------- filtering / rendering ----------
+    function matchesFilters(post){
+      if(activeCat !== 'all' && post.cat !== activeCat) return false;
+      if(searchTerm){
+        const hay = ((post.desc||'') + ' ' + (post.coords||'') + ' ' + (post.country||'')).toLowerCase();
+        if(!hay.includes(searchTerm.toLowerCase())) return false;
+      }
+      return true;
+    }
+
+    function render(){
+      const filtered = posts.filter(matchesFilters);
+      const gotCount = posts.filter(p => p.obtained).length;
+      statPill.textContent = `🌱 共 ${posts.length} 個地點・已取得 ${gotCount} 個` + (filtered.length !== posts.length ? `・顯示 ${filtered.length} 個` : '');
+
+      if(filtered.length === 0){
+        grid.innerHTML = `
+          <div class="empty-state">
+            <span class="emoji">${posts.length === 0 ? '🗺️' : '🔍'}</span>
+            <div class="title">${posts.length === 0 ? '還沒有任何地點' : '沒有符合條件的地點'}</div>
+            <div>${posts.length === 0 ? '點上方「＋ 新增地點」開始建立你的第一筆紀錄' : '試試看調整搜尋關鍵字或篩選條件'}</div>
+          </div>`;
+        return;
+      }
+
+      const canEditObtained = !GOOGLE_CLIENT_ID || isAdmin();
+
+      grid.innerHTML = filtered.map((post, i) => {
+        const isGot = !!post.obtained;
+        const src = post.imageUrl || post.img;
+        const img = src ? `<img class="thumb" src="${src}" alt="明信片">` : `<div class="thumb-empty">🌱 未提供圖片</div>`;
+        return `
+        <div class="card" data-id="${post.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
+          ${img}
+          <div class="card-body">
+            <div class="tag-row">
+              <span class="badge ${post.cat}">${CATS[post.cat] ? CATS[post.cat].icon : ''} ${CATS[post.cat] ? CATS[post.cat].label : post.cat}</span>
+              ${post.country ? `<span class="country-tag">📍 ${escapeHtml(post.country)}</span>` : ''}
+            </div>
+            <div class="coord-box">
+              <code>${escapeHtml(post.coords)}</code>
+              <button class="copy-btn" data-action="copy" type="button">📋 複製</button>
+            </div>
+            ${post.desc ? `<p class="desc">${escapeHtml(post.desc)}</p>` : ''}
+            <div class="card-footer">
+              <label class="obtained-label ${isGot?'on':''} ${canEditObtained?'editable':''}">
+                <input type="checkbox" data-action="toggle" ${isGot?'checked':''} ${canEditObtained?'':'disabled'}>
+                ${canEditObtained ? '' : '🔒 '}${isGot ? '✅' : ''} 沐沐已取得
+              </label>
+              <button class="del-btn" data-action="delete" type="button">刪除</button>
+            </div>
           </div>
-          ${post.desc ? `<p class="desc">${escapeHtml(post.desc)}</p>` : ''}
-          <div class="card-footer">
-            <label class="obtained-label ${isGot?'on':''}">
-              <input type="checkbox" data-action="toggle" ${isGot?'checked':''}>
-              ${isGot ? '✅' : ''} Mu 已取得
-            </label>
-            <button class="del-btn" data-action="delete" type="button">刪除</button>
+        </div>`;
+      }).join('');
+    }
+
+    grid.addEventListener('click', (e) => {
+      const card = e.target.closest('.card');
+      if(!card) return;
+      const id = card.dataset.id;
+      const post = posts.find(p => String(p.id) === id);
+      if(!post) return;
+
+      if(e.target.closest('[data-action="copy"]')){
+        const btn = e.target.closest('.copy-btn');
+        navigator.clipboard.writeText(post.coords).then(()=>{
+          showToast('已複製座標 🌱');
+          const original = btn.textContent;
+          btn.textContent = '已複製 ✅';
+          btn.classList.add('copied');
+          setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+        });
+      } else if(e.target.closest('[data-action="delete"]')){
+        if(confirm('確定要刪除這個地點嗎？')) deletePost(post);
+      }
+    });
+
+    grid.addEventListener('change', async (e) => {
+      if(e.target.dataset.action === 'toggle'){
+        const card = e.target.closest('.card');
+        const id = card.dataset.id;
+        const post = posts.find(p => String(p.id) === id);
+        const newVal = e.target.checked;
+        post.obtained = newVal;
+        render();
+
+        if(API_URL){
+          try{
+            const res = await fetch(API_URL, {
+              method:'POST',
+              headers:{'Content-Type':'text/plain;charset=utf-8'},
+              body: JSON.stringify({ action:'toggle', id, value:newVal, idToken: currentUser ? currentUser.idToken : '' })
+            });
+            const data = await res.json();
+            if(!data.ok) throw new Error(data.error || 'failed');
+          }catch(err){
+            showToast(err && err.message === 'not authorized' ? '只有管理員可以勾選' : '同步失敗，請檢查網路連線');
+            post.obtained = !newVal; render();
+          }
+        } else {
+          obtainedMap[id] = newVal;
+          await saveObtainedLocal();
+        }
+      }
+    });
+
+    async function deletePost(post){
+      if(API_URL){
+        try{
+          const res = await fetch(`${API_URL}?action=delete&id=${encodeURIComponent(post.id)}`);
+          const data = await res.json();
+          if(!data.ok) throw new Error();
+        }catch(e){ showToast('刪除失敗，請稍後再試'); return; }
+      } else {
+        delete obtainedMap[post.id];
+        await saveObtainedLocal();
+      }
+      posts = posts.filter(p => p.id !== post.id);
+      if(!API_URL) await savePostsLocal();
+      render();
+    }
+
+    document.getElementById('catFilters').addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if(!btn) return;
+      activeCat = btn.dataset.cat;
+      document.querySelectorAll('#catFilters .chip').forEach(p => p.classList.toggle('active', p===btn));
+      render();
+    });
+
+    let searchDebounce;
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(()=>{ searchTerm = e.target.value.trim(); render(); }, 150);
+    });
+
+    // ---------- add modal ----------
+    const modalRoot = document.getElementById('modalRoot');
+    let pendingImg = null;
+    let pendingCat = 'flower';
+
+    function openModal(){
+      pendingImg = null;
+      pendingCat = 'flower';
+      modalRoot.innerHTML = `
+      <div class="overlay" id="overlay">
+        <div class="modal">
+          <h2>🌱 新增地點</h2>
+          <p class="sub">上傳明信片，記下座標與說明</p>
+
+          <div class="field">
+            <label>明信片圖片（選填）</label>
+            <div class="upload-box" id="uploadBox">
+              <span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span>
+              <input type="file" accept="image/*" id="imgInput">
+            </div>
+          </div>
+
+          <div class="field">
+            <label>座標</label>
+            <input type="text" id="coordsInput" placeholder="例如：23.5563, 121.0106">
+            <div class="hint">貼上遊戲內複製的座標即可；離開輸入框後會自動偵測國家</div>
+          </div>
+
+          <div class="field">
+            <label>國家（自動偵測，可手動修改）</label>
+            <div class="country-field-row">
+              <input type="text" id="countryInput" placeholder="輸入座標後自動帶出">
+              <span class="country-spinner" id="countrySpinner">偵測中…</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>類型</label>
+            <div class="cat-choice" id="catChoice">
+              <button type="button" class="sel" data-cat="flower">🌸 花點</button>
+              <button type="button" data-cat="mushroom">🍄 菇點</button>
+              <button type="button" data-cat="hidden">✨ 隱藏點</button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>說明 / 關鍵字（選填）</label>
+            <textarea id="descInput" placeholder="例如：公園入口右側、限定花色…"></textarea>
+          </div>
+
+          <div class="err" id="formErr"></div>
+
+          <div class="modal-actions">
+            <button class="btn ghost" id="cancelBtn" type="button">取消</button>
+            <button class="btn primary" id="submitBtn" type="button">新增地點</button>
           </div>
         </div>
       </div>`;
-    }).join('');
-  }
 
-  grid.addEventListener('click', (e) => {
-    const card = e.target.closest('.card');
-    if(!card) return;
-    const id = card.dataset.id;
-    const post = posts.find(p => String(p.id) === id);
-    if(!post) return;
+      document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') closeModal(); });
+      document.getElementById('cancelBtn').addEventListener('click', closeModal);
 
-    if(e.target.closest('[data-action="copy"]')){
-      const btn = e.target.closest('.copy-btn');
-      navigator.clipboard.writeText(post.coords).then(()=>{
-        showToast('已複製座標 🌱');
-        const original = btn.textContent;
-        btn.textContent = '已複製 ✅';
-        btn.classList.add('copied');
-        setTimeout(()=>{ btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+      document.getElementById('catChoice').addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if(!btn) return;
+        pendingCat = btn.dataset.cat;
+        document.querySelectorAll('#catChoice button').forEach(b => b.classList.toggle('sel', b===btn));
       });
-    } else if(e.target.closest('[data-action="delete"]')){
-      if(confirm('確定要刪除這個地點嗎？')){
-        posts = posts.filter(p => p.id !== post.id);
-        delete obtained[post.id];
-        savePosts(); saveObtained();
-        render();
-      }
+
+      document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+      document.getElementById('coordsInput').addEventListener('blur', detectCountry);
+      document.getElementById('submitBtn').addEventListener('click', submitPost);
     }
-  });
 
-  grid.addEventListener('change', (e) => {
-    if(e.target.dataset.action === 'toggle'){
-      const card = e.target.closest('.card');
-      const id = card.dataset.id;
-      obtained[id] = e.target.checked;
-      saveObtained();
-      render();
+    function closeModal(){ modalRoot.innerHTML = ''; }
+
+    async function detectCountry(){
+      const coordsVal = document.getElementById('coordsInput').value.trim();
+      const countryInput = document.getElementById('countryInput');
+      const spinner = document.getElementById('countrySpinner');
+      if(!coordsVal || countryInput.value.trim()) return;
+      const m = coordsVal.match(/(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)/);
+      if(!m) return;
+      const lat = m[1], lon = m[2];
+      spinner.classList.add('show');
+      try{
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=3&accept-language=zh-TW`);
+        const data = await res.json();
+        if(data && data.address && data.address.country){
+          countryInput.value = data.address.country;
+        }
+      }catch(e){ /* 偵測失敗就靜默，讓使用者自行輸入 */ }
+      spinner.classList.remove('show');
     }
-  });
 
-  document.getElementById('catFilters').addEventListener('click', (e) => {
-    const btn = e.target.closest('.chip');
-    if(!btn) return;
-    activeCat = btn.dataset.cat;
-    document.querySelectorAll('#catFilters .chip').forEach(p => p.classList.toggle('active', p===btn));
-    render();
-  });
-
-  let searchDebounce;
-  document.getElementById('searchInput').addEventListener('input', (e) => {
-    clearTimeout(searchDebounce);
-    searchDebounce = setTimeout(()=>{ searchTerm = e.target.value.trim(); render(); }, 150);
-  });
-
-  // ---------- add modal ----------
-  const modalRoot = document.getElementById('modalRoot');
-  let pendingImg = null;
-  let pendingCat = 'flower';
-
-  function openModal(){
-    pendingImg = null;
-    pendingCat = 'flower';
-    modalRoot.innerHTML = `
-    <div class="overlay" id="overlay">
-      <div class="modal">
-        <h2>🌱 新增地點</h2>
-        <p class="sub">上傳明信片，記下座標與說明</p>
-
-        <div class="field">
-          <label>明信片圖片（選填）</label>
-          <div class="upload-box" id="uploadBox">
-            <span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span>
-            <input type="file" accept="image/*" id="imgInput">
-          </div>
-        </div>
-
-        <div class="field">
-          <label>座標</label>
-          <input type="text" id="coordsInput" placeholder="例如：23.5563, 121.0106">
-          <div class="hint">貼上遊戲內複製的座標即可，一鍵複製時會完整保留</div>
-        </div>
-
-        <div class="field">
-          <label>類型</label>
-          <div class="cat-choice" id="catChoice">
-            <button type="button" class="sel" data-cat="flower">🌸 花點</button>
-            <button type="button" data-cat="mushroom">🍄 菇點</button>
-            <button type="button" data-cat="hidden">✨ 隱藏點</button>
-          </div>
-        </div>
-
-        <div class="field">
-          <label>說明 / 關鍵字（選填）</label>
-          <textarea id="descInput" placeholder="例如：公園入口右側、限定花色…"></textarea>
-        </div>
-
-        <div class="err" id="formErr"></div>
-
-        <div class="modal-actions">
-          <button class="btn ghost" id="cancelBtn" type="button">取消</button>
-          <button class="btn primary" id="submitBtn" type="button">新增地點</button>
-        </div>
-      </div>
-    </div>`;
-
-    document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') closeModal(); });
-    document.getElementById('cancelBtn').addEventListener('click', closeModal);
-
-    document.getElementById('catChoice').addEventListener('click', (e) => {
-      const btn = e.target.closest('button');
-      if(!btn) return;
-      pendingCat = btn.dataset.cat;
-      document.querySelectorAll('#catChoice button').forEach(b => b.classList.toggle('sel', b===btn));
-    });
-
-    document.getElementById('imgInput').addEventListener('change', handleImgSelect);
-    document.getElementById('submitBtn').addEventListener('click', submitPost);
-  }
-
-  function closeModal(){ modalRoot.innerHTML = ''; }
-
-  function handleImgSelect(e){
-    const file = e.target.files[0];
-    if(!file) return;
-    const errEl = document.getElementById('formErr');
-    errEl.textContent = '';
-    const reader = new FileReader();
-    reader.onload = function(ev){
-      const img = new Image();
-      img.onload = function(){
-        const maxW = 640;
-        const scale = Math.min(1, maxW / img.width);
-        const canvas = document.createElement('canvas');
-        canvas.width = img.width * scale;
-        canvas.height = img.height * scale;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        pendingImg = canvas.toDataURL('image/jpeg', 0.65);
-        const box = document.getElementById('uploadBox');
-        box.innerHTML = `<img src="${pendingImg}" alt="預覽"><input type="file" accept="image/*" id="imgInput">`;
-        document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+    function handleImgSelect(e){
+      const file = e.target.files[0];
+      if(!file) return;
+      const errEl = document.getElementById('formErr');
+      errEl.textContent = '';
+      const reader = new FileReader();
+      reader.onload = function(ev){
+        const img = new Image();
+        img.onload = function(){
+          const maxW = 640;
+          const scale = Math.min(1, maxW / img.width);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width * scale;
+          canvas.height = img.height * scale;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          pendingImg = canvas.toDataURL('image/jpeg', 0.65);
+          const box = document.getElementById('uploadBox');
+          box.innerHTML = `<img src="${pendingImg}" alt="預覽"><input type="file" accept="image/*" id="imgInput">`;
+          document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+        };
+        img.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
+        img.src = ev.target.result;
       };
-      img.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
-      img.src = ev.target.result;
-    };
-    reader.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
-    reader.readAsDataURL(file);
+      reader.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
+      reader.readAsDataURL(file);
+    }
+
+    async function submitPost(){
+      const coords = document.getElementById('coordsInput').value.trim();
+      const country = document.getElementById('countryInput').value.trim();
+      const desc = document.getElementById('descInput').value.trim();
+      const errEl = document.getElementById('formErr');
+      if(!coords){ errEl.textContent = '請輸入座標'; return; }
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = '新增中…';
+
+      if(API_URL){
+        try{
+          const res = await fetch(API_URL, {
+            method:'POST',
+            headers:{'Content-Type':'text/plain;charset=utf-8'},
+            body: JSON.stringify({ action:'add', coords, country, cat: pendingCat, desc, image: pendingImg })
+          });
+          const data = await res.json();
+          if(!data.ok) throw new Error();
+          await loadPosts();
+        }catch(e){
+          errEl.textContent = '新增失敗，請確認後端網址是否正確';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '新增地點';
+          return;
+        }
+      } else {
+        const post = {
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
+          img: pendingImg, coords, country, cat: pendingCat, desc, createdAt: Date.now(), obtained:false
+        };
+        posts.unshift(post);
+        await savePostsLocal();
+      }
+
+      closeModal();
+      render();
+      showToast('已新增地點 🌸');
+    }
+
+    document.getElementById('openAdd').addEventListener('click', openModal);
+
+    initGoogleSignIn();
+    loadPosts();
   }
-
-  async function submitPost(){
-    const coords = document.getElementById('coordsInput').value.trim();
-    const desc = document.getElementById('descInput').value.trim();
-    const errEl = document.getElementById('formErr');
-    if(!coords){ errEl.textContent = '請輸入座標'; return; }
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = true;
-    submitBtn.textContent = '新增中…';
-
-    const post = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-      img: pendingImg, coords, cat: pendingCat, desc, createdAt: Date.now()
-    };
-    posts.unshift(post);
-    await savePosts();
-    closeModal();
-    render();
-    showToast('已新增地點 🌸');
-  }
-
-  document.getElementById('openAdd').addEventListener('click', openModal);
-
-  loadData();
 })();
 </script>
 </body>
