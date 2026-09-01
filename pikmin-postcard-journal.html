@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 <style>
   :root{
     --cream:#FFF6E8; --cream-deep:#FBE9CC;
@@ -221,6 +222,16 @@
   }
   .upload-box img{ max-width:100%; max-height:160px; border-radius:10px; display:block; margin:0 auto; }
   .upload-box input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+
+  .ocr-box{ margin-top:8px; }
+  .ocr-hint{ font-size:11.5px; color:#7C9686; margin-bottom:6px; }
+  .ocr-status{ font-size:12px; color:#A6947A; }
+  .ocr-chip{
+    display:inline-block; margin:0 6px 6px 0; padding:6px 12px; border-radius:999px;
+    background:#EFF7F1; color:var(--leaf-deep); font-size:12px; font-weight:700; border:none; cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif; transition:background .15s ease;
+  }
+  .ocr-chip:hover{ background:#D9EFE0; }
 
   .modal-actions{ display:flex; gap:10px; margin-top:18px; }
   .btn{ flex:1; padding:12px; border-radius:14px; border:none; font-family:"Zen Maru Gothic",sans-serif; font-size:14.5px; font-weight:800; cursor:pointer; transition:transform .15s ease; }
@@ -648,6 +659,7 @@
               <span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span>
               <input type="file" accept="image/*" id="imgInput">
             </div>
+            <div class="ocr-box" id="ocrBox"></div>
           </div>
 
           <div class="field">
@@ -728,6 +740,7 @@
       if(!file) return;
       const errEl = document.getElementById('formErr');
       errEl.textContent = '';
+      document.getElementById('ocrBox').innerHTML = '';
       const reader = new FileReader();
       reader.onload = function(ev){
         const img = new Image();
@@ -743,12 +756,45 @@
           const box = document.getElementById('uploadBox');
           box.innerHTML = `<img src="${pendingImg}" alt="預覽"><input type="file" accept="image/*" id="imgInput">`;
           document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+          runOcr(ev.target.result); // 用原始解析度的圖片辨識，準確度較高
         };
         img.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
         img.src = ev.target.result;
       };
       reader.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
       reader.readAsDataURL(file);
+    }
+
+    async function runOcr(dataUrl){
+      const ocrBox = document.getElementById('ocrBox');
+      if(!ocrBox || typeof Tesseract === 'undefined'){ return; }
+      ocrBox.innerHTML = '<span class="ocr-status">🔍 辨識圖片文字中…（第一次使用需要下載語言資料，請稍候）</span>';
+      try{
+        const { data } = await Tesseract.recognize(dataUrl, 'chi_tra+eng');
+        const currentBox = document.getElementById('ocrBox');
+        if(!currentBox) return; // 使用者可能已關閉視窗
+        const lines = (data.text || '')
+          .split('\n')
+          .map(s => s.trim())
+          .filter(s => s.length >= 2 && !/^[\d\s:.\-–—%]+$/.test(s));
+        const uniq = [...new Set(lines)].slice(0, 8);
+        if(uniq.length === 0){
+          currentBox.innerHTML = '<span class="ocr-status">沒有偵測到文字，可以手動輸入說明</span>';
+          return;
+        }
+        currentBox.innerHTML = '<div class="ocr-hint">🔍 偵測到以下文字，點一下帶入說明欄：</div>' +
+          uniq.map(t => `<button type="button" class="ocr-chip">${escapeHtml(t)}</button>`).join('');
+        currentBox.querySelectorAll('.ocr-chip').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const descEl = document.getElementById('descInput');
+            if(!descEl) return;
+            descEl.value = descEl.value ? descEl.value + ' ' + btn.textContent : btn.textContent;
+          });
+        });
+      }catch(e){
+        const currentBox = document.getElementById('ocrBox');
+        if(currentBox) currentBox.innerHTML = '<span class="ocr-status">辨識失敗，可以手動輸入說明</span>';
+      }
     }
 
     async function submitPost(){
