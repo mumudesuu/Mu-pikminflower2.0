@@ -223,6 +223,33 @@
   .upload-box img{ max-width:100%; max-height:160px; border-radius:10px; display:block; margin:0 auto; }
   .upload-box input[type=file]{ position:absolute; inset:0; opacity:0; cursor:pointer; }
 
+  .recrop-btn{
+    display:none; margin-top:8px; border:none; background:#EFF7F1; color:var(--leaf-deep); font-weight:700;
+    font-size:12px; padding:6px 12px; border-radius:999px; cursor:pointer; font-family:"Zen Maru Gothic",sans-serif;
+  }
+  .recrop-btn:hover{ background:#D9EFE0; }
+
+  .crop-stage{ margin-top:8px; }
+  .crop-wrap{
+    position:relative; width:100%; overflow:hidden; border-radius:14px; background:#20241f; touch-action:none;
+  }
+  .crop-wrap img{ display:block; width:100%; height:auto; pointer-events:none; -webkit-user-drag:none; user-select:none; }
+  .crop-box{
+    position:absolute; border:2px solid #FFC93C; box-shadow:0 0 0 9999px rgba(0,0,0,.5);
+    touch-action:none; cursor:move;
+  }
+  .crop-handle{
+    position:absolute; width:16px; height:16px; background:#FFC93C; border:2px solid #fff; border-radius:50%;
+    touch-action:none;
+  }
+  .crop-handle[data-corner="nw"]{ top:-9px; left:-9px; cursor:nwse-resize; }
+  .crop-handle[data-corner="ne"]{ top:-9px; right:-9px; cursor:nesw-resize; }
+  .crop-handle[data-corner="sw"]{ bottom:-9px; left:-9px; cursor:nesw-resize; }
+  .crop-handle[data-corner="se"]{ bottom:-9px; right:-9px; cursor:nwse-resize; }
+  .crop-actions{ display:flex; gap:8px; margin-top:10px; }
+  .crop-actions .btn{ padding:9px; font-size:13px; }
+  .crop-hint{ font-size:11px; color:#A6947A; margin-top:6px; }
+
   .ocr-box{ margin-top:8px; }
   .ocr-hint{ font-size:11.5px; color:#7C9686; margin-bottom:6px; }
   .ocr-status{ font-size:12px; color:#A6947A; }
@@ -643,10 +670,16 @@
     const modalRoot = document.getElementById('modalRoot');
     let pendingImg = null;
     let pendingCat = 'flower';
+    let rawImageDataUrl = null;
+    let cropRect = {x:0,y:0,w:0,h:0};
+    let cropDisplayW = 0, cropDisplayH = 0, cropNaturalW = 0, cropNaturalH = 0;
+    let cropHandlersBound = false;
 
     function openModal(){
       pendingImg = null;
       pendingCat = 'flower';
+      rawImageDataUrl = null;
+      cropHandlersBound = false;
       modalRoot.innerHTML = `
       <div class="overlay" id="overlay">
         <div class="modal">
@@ -659,6 +692,26 @@
               <span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span>
               <input type="file" accept="image/*" id="imgInput">
             </div>
+            <button type="button" class="recrop-btn" id="recropBtn">✂️ 重新裁剪</button>
+
+            <div class="crop-stage" id="cropStage" style="display:none;">
+              <div class="crop-wrap" id="cropWrap">
+                <img id="cropImg" draggable="false" alt="裁剪預覽">
+                <div class="crop-box" id="cropBox">
+                  <div class="crop-handle" data-corner="nw"></div>
+                  <div class="crop-handle" data-corner="ne"></div>
+                  <div class="crop-handle" data-corner="sw"></div>
+                  <div class="crop-handle" data-corner="se"></div>
+                </div>
+              </div>
+              <div class="crop-hint">拖曳框線調整範圍，或直接在圖片上拖曳畫出新的框選區</div>
+              <div class="crop-actions">
+                <button type="button" id="cropResetBtn" class="btn ghost" style="flex:0 0 auto;">重設</button>
+                <button type="button" id="cropSkipBtn" class="btn ghost">使用原圖</button>
+                <button type="button" id="cropApplyBtn" class="btn primary">✂️ 完成裁剪</button>
+              </div>
+            </div>
+
             <div class="ocr-box" id="ocrBox"></div>
           </div>
 
@@ -712,6 +765,12 @@
       document.getElementById('imgInput').addEventListener('change', handleImgSelect);
       document.getElementById('coordsInput').addEventListener('blur', detectCountry);
       document.getElementById('submitBtn').addEventListener('click', submitPost);
+      document.getElementById('cropApplyBtn').addEventListener('click', () => finalizeFromRect(cropRect));
+      document.getElementById('cropSkipBtn').addEventListener('click', () => finalizeFromRect({x:0, y:0, w:cropDisplayW, h:cropDisplayH}));
+      document.getElementById('cropResetBtn').addEventListener('click', () => {
+        cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
+        updateCropBoxUI();
+      });
     }
 
     function closeModal(){ modalRoot.innerHTML = ''; }
@@ -743,26 +802,144 @@
       document.getElementById('ocrBox').innerHTML = '';
       const reader = new FileReader();
       reader.onload = function(ev){
-        const img = new Image();
-        img.onload = function(){
-          const maxW = 640;
-          const scale = Math.min(1, maxW / img.width);
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width * scale;
-          canvas.height = img.height * scale;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-          pendingImg = canvas.toDataURL('image/jpeg', 0.65);
-          const box = document.getElementById('uploadBox');
-          box.innerHTML = `<img src="${pendingImg}" alt="預覽"><input type="file" accept="image/*" id="imgInput">`;
-          document.getElementById('imgInput').addEventListener('change', handleImgSelect);
-          runOcr(ev.target.result); // 用原始解析度的圖片辨識，準確度較高
-        };
-        img.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
-        img.src = ev.target.result;
+        rawImageDataUrl = ev.target.result;
+        runOcr(rawImageDataUrl);
+        openCropStage(rawImageDataUrl);
       };
       reader.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
       reader.readAsDataURL(file);
+    }
+
+    function openCropStage(dataUrl){
+      const uploadBox = document.getElementById('uploadBox');
+      const recropBtn = document.getElementById('recropBtn');
+      const stage = document.getElementById('cropStage');
+      uploadBox.style.display = 'none';
+      recropBtn.style.display = 'none';
+      stage.style.display = 'block';
+
+      const cropImg = document.getElementById('cropImg');
+      cropImg.onload = function(){
+        cropNaturalW = cropImg.naturalWidth;
+        cropNaturalH = cropImg.naturalHeight;
+        requestAnimationFrame(() => {
+          cropDisplayW = cropImg.clientWidth;
+          cropDisplayH = cropImg.clientHeight;
+          cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
+          updateCropBoxUI();
+        });
+      };
+      cropImg.src = dataUrl;
+      setupCropHandlers();
+    }
+
+    function updateCropBoxUI(){
+      const box = document.getElementById('cropBox');
+      if(!box) return;
+      box.style.left = cropRect.x + 'px';
+      box.style.top = cropRect.y + 'px';
+      box.style.width = cropRect.w + 'px';
+      box.style.height = cropRect.h + 'px';
+    }
+
+    function setupCropHandlers(){
+      if(cropHandlersBound) return;
+      cropHandlersBound = true;
+      const wrap = document.getElementById('cropWrap');
+      const box = document.getElementById('cropBox');
+
+      let mode = null; // 'move' | 'resize' | 'new'
+      let corner = null;
+      let startPointer = {x:0,y:0};
+      let startRect = {x:0,y:0,w:0,h:0};
+
+      function getPos(e){
+        const r = wrap.getBoundingClientRect();
+        return { x: e.clientX - r.left, y: e.clientY - r.top };
+      }
+
+      box.addEventListener('pointerdown', (e) => {
+        mode = e.target.classList.contains('crop-handle') ? 'resize' : 'move';
+        corner = e.target.dataset.corner || null;
+        startPointer = getPos(e);
+        startRect = {...cropRect};
+        wrap.setPointerCapture(e.pointerId);
+        e.stopPropagation();
+      });
+
+      wrap.addEventListener('pointerdown', (e) => {
+        if(mode) return;
+        mode = 'new';
+        const p = getPos(e);
+        startPointer = p;
+        cropRect = {x:p.x, y:p.y, w:0, h:0};
+        updateCropBoxUI();
+        wrap.setPointerCapture(e.pointerId);
+      });
+
+      wrap.addEventListener('pointermove', (e) => {
+        if(!mode) return;
+        const p = getPos(e);
+        if(mode === 'move'){
+          let nx = startRect.x + (p.x - startPointer.x);
+          let ny = startRect.y + (p.y - startPointer.y);
+          nx = Math.max(0, Math.min(nx, cropDisplayW - startRect.w));
+          ny = Math.max(0, Math.min(ny, cropDisplayH - startRect.h));
+          cropRect = {x:nx, y:ny, w:startRect.w, h:startRect.h};
+        } else if(mode === 'resize'){
+          let {x,y,w,h} = startRect;
+          const dx = p.x - startPointer.x;
+          const dy = p.y - startPointer.y;
+          if(corner === 'se'){ w = startRect.w + dx; h = startRect.h + dy; }
+          else if(corner === 'sw'){ x = startRect.x + dx; w = startRect.w - dx; h = startRect.h + dy; }
+          else if(corner === 'ne'){ y = startRect.y + dy; w = startRect.w + dx; h = startRect.h - dy; }
+          else if(corner === 'nw'){ x = startRect.x + dx; y = startRect.y + dy; w = startRect.w - dx; h = startRect.h - dy; }
+          x = Math.max(0, x); y = Math.max(0, y);
+          w = Math.max(30, Math.min(w, cropDisplayW - x));
+          h = Math.max(30, Math.min(h, cropDisplayH - y));
+          cropRect = {x,y,w,h};
+        } else if(mode === 'new'){
+          let nx = Math.min(startPointer.x, p.x);
+          let ny = Math.min(startPointer.y, p.y);
+          let nw = Math.abs(p.x - startPointer.x);
+          let nh = Math.abs(p.y - startPointer.y);
+          nx = Math.max(0, nx); ny = Math.max(0, ny);
+          nw = Math.min(nw, cropDisplayW - nx);
+          nh = Math.min(nh, cropDisplayH - ny);
+          cropRect = {x:nx, y:ny, w:nw, h:nh};
+        }
+        updateCropBoxUI();
+      });
+
+      function endDrag(){ mode = null; corner = null; }
+      wrap.addEventListener('pointerup', endDrag);
+      wrap.addEventListener('pointercancel', endDrag);
+    }
+
+    function finalizeFromRect(rect){
+      if(rect.w < 10 || rect.h < 10){
+        rect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
+      }
+      const cropImg = document.getElementById('cropImg');
+      const scale = cropNaturalW / cropDisplayW;
+      const sx = rect.x * scale, sy = rect.y * scale, sw = rect.w * scale, sh = rect.h * scale;
+      const maxW = 640;
+      const destW = Math.min(sw, maxW);
+      const destH = sh * (destW / sw);
+      const canvas = document.createElement('canvas');
+      canvas.width = destW; canvas.height = destH;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, destW, destH);
+      pendingImg = canvas.toDataURL('image/jpeg', 0.7);
+
+      document.getElementById('cropStage').style.display = 'none';
+      const box = document.getElementById('uploadBox');
+      box.style.display = 'block';
+      box.innerHTML = `<img src="${pendingImg}" alt="預覽"><input type="file" accept="image/*" id="imgInput">`;
+      document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+      const recropBtn = document.getElementById('recropBtn');
+      recropBtn.style.display = 'inline-block';
+      recropBtn.onclick = () => { if(rawImageDataUrl) openCropStage(rawImageDataUrl); };
     }
 
     async function runOcr(dataUrl){
