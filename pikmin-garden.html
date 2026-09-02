@@ -156,6 +156,33 @@
   .filter-tab:hover{border-color:var(--leaf);}
   .filter-tab.active{background:var(--leaf); border-color:var(--leaf); color:var(--white);}
 
+  .search-bar{position:relative; margin-bottom:14px;}
+  .search-bar input{
+    width:100%;
+    background:var(--white);
+    border:2px solid var(--cream-deep);
+    color:var(--ink);
+    border-radius:14px;
+    padding:11px 16px 11px 40px;
+    font-family:'Zen Maru Gothic',sans-serif;
+    font-size:14px;
+    font-weight:700;
+    outline:none;
+  }
+  .search-bar input::placeholder{color:#A9BBAE; font-weight:600;}
+  .search-bar input:focus{border-color:var(--leaf);}
+  .search-bar .search-icon{
+    position:absolute; left:14px; top:50%; transform:translateY(-50%);
+    font-size:15px; pointer-events:none;
+  }
+  .search-bar .search-clear{
+    position:absolute; right:10px; top:50%; transform:translateY(-50%);
+    background:none; border:none; color:#9AAB9F; cursor:pointer;
+    font-size:15px; padding:4px; display:none;
+  }
+  .search-bar .search-clear:hover{color:var(--danger);}
+  .search-bar.has-value .search-clear{display:block;}
+
   .settings-panel{
     background:var(--white);
     border:2px solid var(--cream-deep);
@@ -547,6 +574,12 @@
 </header>
 
 <main>
+  <div class="search-bar" id="searchBar">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="搜尋花田名稱、花種…" autocomplete="off">
+    <button class="search-clear" id="searchClear" type="button">✕</button>
+  </div>
+
   <div class="filter-tabs" id="filterTabs">
     <button class="filter-tab active" data-role="filter" data-category="all">全部</button>
     <button class="filter-tab" data-role="filter" data-category="沐田">沐田</button>
@@ -608,6 +641,7 @@ let adminIdToken = '';
 let customOpenIds = new Set();
 let hiddenCustomOpenIds = new Set();
 let currentFilter = 'all';
+let currentSearch = '';
 let pendingWrites = {};
 
 function markPending(id, keys){
@@ -1065,13 +1099,20 @@ function cardTemplate(f){
 function render(){
   const grid = document.getElementById('grid');
   const empty = document.getElementById('emptyState');
-  const visibleFields = currentFilter === 'all' ? fields : fields.filter(f => f.category === currentFilter);
+  let visibleFields = currentFilter === 'all' ? fields : fields.filter(f => f.category === currentFilter);
+  const keyword = currentSearch.trim().toLowerCase();
+  if(keyword){
+    visibleFields = visibleFields.filter(f =>
+      f.name.toLowerCase().includes(keyword) ||
+      f.species.toLowerCase().includes(keyword)
+    );
+  }
   if(visibleFields.length === 0){
     grid.innerHTML = '';
     empty.style.display = 'block';
     document.getElementById('emptyHint').textContent = initialLoading
       ? '🌱 正在讀取花田資料…'
-      : (fields.length === 0 ? '新增第一塊花田，開始記錄採收進度吧。' : '這個分類目前還沒有花田。');
+      : (keyword ? '沒有符合搜尋的花田。' : (fields.length === 0 ? '新增第一塊花田，開始記錄採收進度吧。' : '這個分類目前還沒有花田。'));
     return;
   }
   empty.style.display = 'none';
@@ -1232,6 +1273,19 @@ document.querySelectorAll('[data-role="filter"]').forEach(btn=>{
     e.target.classList.add('active');
     render();
   });
+});
+document.getElementById('searchInput').addEventListener('input', e=>{
+  currentSearch = e.target.value;
+  document.getElementById('searchBar').classList.toggle('has-value', currentSearch.length > 0);
+  render();
+});
+document.getElementById('searchClear').addEventListener('click', ()=>{
+  currentSearch = '';
+  const input = document.getElementById('searchInput');
+  input.value = '';
+  document.getElementById('searchBar').classList.remove('has-value');
+  input.focus();
+  render();
 });
 
 /* ---------- 通關密語鎖 ---------- */
