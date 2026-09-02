@@ -442,6 +442,29 @@
     }
     function isAdmin(){ return !!currentUser && currentUser.email === ADMIN_EMAIL; }
 
+    const AUTH_ERROR_MESSAGES = {
+      'no-token': '請先用管理員帳號登入',
+      'invalid-token': '登入已過期，請重新登入一次',
+      'client-mismatch': 'Client ID 跟後端設定不一致，請確認兩邊填的是同一組，並重新部署後端',
+      'email-not-verified': '這個 Google 帳號的信箱尚未驗證',
+      'wrong-account': '這個帳號不是管理員帳號',
+      'not found': '找不到這筆資料，可能已被刪除'
+    };
+    function authErrorMessage(code, fallback){
+      return AUTH_ERROR_MESSAGES[code] || fallback || '操作失敗，請稍後再試';
+    }
+    // 送出管理員動作前，先在前端檢查登入是否還有效，過期就不用白跑一趟後端
+    function isTokenFresh(){
+      if(!currentUser || !currentUser.idToken) return false;
+      const payload = decodeJwt(currentUser.idToken);
+      return !!(payload && payload.exp && payload.exp * 1000 > Date.now() + 5000);
+    }
+    function signOutStale(){
+      currentUser = null;
+      sessionStorage.removeItem('mapJournalIdToken');
+      renderAccountBar();
+    }
+
     // ---------- Google 登入 ----------
     function decodeJwt(token){
       try{
@@ -631,6 +654,14 @@
         const id = card.dataset.id;
         const post = posts.find(p => String(p.id) === id);
         const newVal = e.target.checked;
+
+        if(API_URL && GOOGLE_CLIENT_ID && !isTokenFresh()){
+          e.target.checked = !newVal;
+          signOutStale();
+          showToast('登入已過期，請重新登入一次');
+          return;
+        }
+
         post.obtained = newVal;
         render();
 
@@ -644,7 +675,7 @@
             const data = await res.json();
             if(!data.ok) throw new Error(data.error || 'failed');
           }catch(err){
-            showToast(err && err.message === 'not authorized' ? '只有管理員可以勾選' : '同步失敗，請檢查網路連線');
+            showToast(authErrorMessage(err && err.message, '同步失敗，請檢查網路連線'));
             post.obtained = !newVal; render();
           }
         } else {
@@ -656,6 +687,11 @@
 
     async function deletePost(post){
       if(API_URL){
+        if(GOOGLE_CLIENT_ID && !isTokenFresh()){
+          signOutStale();
+          showToast('登入已過期，請重新登入一次');
+          return;
+        }
         try{
           const res = await fetch(API_URL, {
             method:'POST',
@@ -664,7 +700,7 @@
           });
           const data = await res.json();
           if(!data.ok) throw new Error(data.error || 'failed');
-        }catch(e){ showToast(e && e.message === 'not authorized' ? '只有管理員可以刪除' : '刪除失敗，請稍後再試'); return; }
+        }catch(e){ showToast(authErrorMessage(e && e.message, '刪除失敗，請稍後再試')); return; }
       } else {
         delete obtainedMap[post.id];
         await saveObtainedLocal();
@@ -742,9 +778,12 @@
                   <div class="crop-handle" data-corner="se"></div>
                 </div>
               </div>
-              <div class="crop-hint">拖曳框線調整範圍，或直接在圖片上拖曳畫出新的框選區</div>
+              <div class="crop-hint" id="cropHint">拖曳框線調整範圍，或直接在圖片上拖曳畫出新的框選區</div>
+              <div class="crop-actions" style="margin-bottom:6px;">
+                <button type="button" id="cropSmartBtn" class="btn ghost">🪄 智慧裁剪</button>
+                <button type="button" id="cropResetBtn" class="btn ghost">↺ 重設</button>
+              </div>
               <div class="crop-actions">
-                <button type="button" id="cropResetBtn" class="btn ghost" style="flex:0 0 auto;">重設</button>
                 <button type="button" id="cropSkipBtn" class="btn ghost">使用原圖</button>
                 <button type="button" id="cropApplyBtn" class="btn primary">✂️ 完成裁剪</button>
               </div>
@@ -828,6 +867,7 @@
         cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
         updateCropBoxUI();
       });
+      document.getElementById('cropSmartBtn').addEventListener('click', trySmartCrop);
       document.getElementById('ocrLangRow').addEventListener('click', (e) => {
         const btn = e.target.closest('.lang-chip');
         if(!btn) return;
@@ -891,6 +931,7 @@
           cropDisplayH = cropImg.clientHeight;
           cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
           updateCropBoxUI();
+          trySmartCrop(true); // 圖片一載入就自動跑一次智慧裁剪建議
         });
       };
       cropImg.src = dataUrl;
@@ -904,6 +945,78 @@
       box.style.top = cropRect.y + 'px';
       box.style.width = cropRect.w + 'px';
       box.style.height = cropRect.h + 'px';
+    }
+
+    // 用「局部細節量」粗略區分照片內容跟平面色塊 UI（例如集點卡的純色背景、大片文字底色），
+    // 找出畫面中「最有內容」的區域當作裁剪建議。這是簡易的影像分析，不是真正辨識照片主體，
+    // 遇到版面特殊的截圖可能抓不準，仍然可以手動調整。
+    function computeSmartCropRect(){
+      const cropImg = document.getElementById('cropImg');
+      if(!cropImg || !cropNaturalW || !cropNaturalH || !cropDisplayW || !cropDisplayH) return null;
+      try{
+        const ANALYSIS_W = 64;
+        const scale = ANALYSIS_W / cropNaturalW;
+        const analysisW = ANALYSIS_W;
+        const analysisH = Math.max(1, Math.round(cropNaturalH * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = analysisW; canvas.height = analysisH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(cropImg, 0, 0, analysisW, analysisH);
+        const imgData = ctx.getImageData(0, 0, analysisW, analysisH).data;
+
+        const gray = new Float32Array(analysisW * analysisH);
+        for(let i=0;i<analysisW*analysisH;i++){
+          gray[i] = 0.299*imgData[i*4] + 0.587*imgData[i*4+1] + 0.114*imgData[i*4+2];
+        }
+        const detail = new Float32Array(analysisW * analysisH);
+        for(let y=0;y<analysisH;y++){
+          for(let x=0;x<analysisW;x++){
+            const idx = y*analysisW + x;
+            let diff = 0, count = 0;
+            if(x < analysisW-1){ diff += Math.abs(gray[idx] - gray[idx+1]); count++; }
+            if(y < analysisH-1){ diff += Math.abs(gray[idx] - gray[idx+analysisW]); count++; }
+            detail[idx] = count ? diff/count : 0;
+          }
+        }
+        const sorted = Float32Array.from(detail).sort();
+        const threshold = sorted[Math.floor(sorted.length * 0.45)];
+
+        let minX=analysisW, maxX=0, minY=analysisH, maxY=0, hasAny=false;
+        for(let y=0;y<analysisH;y++){
+          for(let x=0;x<analysisW;x++){
+            if(detail[y*analysisW+x] > threshold){
+              hasAny = true;
+              if(x<minX) minX=x; if(x>maxX) maxX=x;
+              if(y<minY) minY=y; if(y>maxY) maxY=y;
+            }
+          }
+        }
+        if(!hasAny) return null;
+
+        const rect = {
+          x: (minX/analysisW) * cropDisplayW,
+          y: (minY/analysisH) * cropDisplayH,
+          w: ((maxX-minX+1)/analysisW) * cropDisplayW,
+          h: ((maxY-minY+1)/analysisH) * cropDisplayH
+        };
+        if(rect.w < cropDisplayW*0.15 || rect.h < cropDisplayH*0.15) return null;
+        return rect;
+      }catch(e){
+        return null; // 分析失敗就放棄，保留目前框選
+      }
+    }
+
+    function trySmartCrop(silent){
+      const rect = computeSmartCropRect();
+      const hint = document.getElementById('cropHint');
+      if(rect){
+        cropRect = rect;
+        updateCropBoxUI();
+        if(hint) hint.textContent = '🪄 已自動抓出建議範圍，可以直接使用或再手動微調';
+        if(!silent) showToast('已重新分析裁剪範圍 🪄');
+      } else if(!silent){
+        showToast('沒有找到明顯的分界，麻煩手動框選喔');
+      }
     }
 
     function setupCropHandlers(){
@@ -1093,6 +1206,13 @@
       }
 
       if(API_URL){
+        if(editingPostId && GOOGLE_CLIENT_ID && !isTokenFresh()){
+          signOutStale();
+          errEl.textContent = '登入已過期，請重新登入一次';
+          submitBtn.disabled = false;
+          submitBtn.textContent = '儲存修改';
+          return;
+        }
         const payload = editingPostId
           ? { action:'update', id:editingPostId, coords, country, cat:pendingCat, desc, idToken: currentUser ? currentUser.idToken : '' }
           : { action:'add', coords, country, cat:pendingCat, desc };
@@ -1107,9 +1227,9 @@
           if(!data.ok) throw new Error(data.error || 'failed');
           await loadPosts();
         }catch(e){
-          errEl.textContent = e && e.message === 'not authorized'
-            ? '只有管理員可以修改'
-            : (editingPostId ? '修改失敗，請確認網路連線' : '新增失敗，請確認後端網址是否正確');
+          errEl.textContent = editingPostId
+            ? authErrorMessage(e && e.message, '修改失敗，請確認網路連線')
+            : '新增失敗，請確認後端網址是否正確';
           submitBtn.disabled = false;
           submitBtn.textContent = editingPostId ? '儲存修改' : '新增地點';
           return;
