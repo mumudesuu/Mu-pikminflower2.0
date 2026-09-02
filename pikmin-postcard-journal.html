@@ -444,12 +444,7 @@
     function authErrorMessage(code, fallback){
       return AUTH_ERROR_MESSAGES[code] || fallback || '操作失敗，請稍後再試';
     }
-    // 送出管理員動作前，先在前端檢查登入是否還有效，過期就不用白跑一趟後端
-    function isTokenFresh(){
-      if(!currentUser || !currentUser.idToken) return false;
-      const payload = decodeJwt(currentUser.idToken);
-      return !!(payload && payload.exp && payload.exp * 1000 > Date.now() + 5000);
-    }
+    // 管理員操作被後端拒絕、且原因是憑證無效/過期時，順手把前端也登出，讓登入按鈕重新出現
     function signOutStale(){
       currentUser = null;
       sessionStorage.removeItem('mapJournalIdToken');
@@ -652,13 +647,6 @@
         const post = posts.find(p => String(p.id) === id);
         const newVal = e.target.checked;
 
-        if(API_URL && GOOGLE_CLIENT_ID && !isTokenFresh()){
-          e.target.checked = !newVal;
-          signOutStale();
-          showToast('登入已過期，請重新登入一次');
-          return;
-        }
-
         post.obtained = newVal;
         render();
 
@@ -672,6 +660,7 @@
             const data = await res.json();
             if(!data.ok) throw new Error(data.error || 'failed');
           }catch(err){
+            if(err && (err.message === 'invalid-token' || err.message === 'no-token')) signOutStale();
             showToast(authErrorMessage(err && err.message, '同步失敗，請檢查網路連線'));
             post.obtained = !newVal; render();
           }
@@ -684,11 +673,6 @@
 
     async function deletePost(post){
       if(API_URL){
-        if(GOOGLE_CLIENT_ID && !isTokenFresh()){
-          signOutStale();
-          showToast('登入已過期，請重新登入一次');
-          return;
-        }
         try{
           const res = await fetch(API_URL, {
             method:'POST',
@@ -697,7 +681,11 @@
           });
           const data = await res.json();
           if(!data.ok) throw new Error(data.error || 'failed');
-        }catch(e){ showToast(authErrorMessage(e && e.message, '刪除失敗，請稍後再試')); return; }
+        }catch(e){
+          if(e && (e.message === 'invalid-token' || e.message === 'no-token')) signOutStale();
+          showToast(authErrorMessage(e && e.message, '刪除失敗，請稍後再試'));
+          return;
+        }
       } else {
         delete obtainedMap[post.id];
         await saveObtainedLocal();
@@ -1157,13 +1145,6 @@
       }
 
       if(API_URL){
-        if(editingPostId && GOOGLE_CLIENT_ID && !isTokenFresh()){
-          signOutStale();
-          errEl.textContent = '登入已過期，請重新登入一次';
-          submitBtn.disabled = false;
-          submitBtn.textContent = '儲存修改';
-          return;
-        }
         const payload = editingPostId
           ? { action:'update', id:editingPostId, coords, country, cat:pendingCat, desc, idToken: currentUser ? currentUser.idToken : '' }
           : { action:'add', coords, country, cat:pendingCat, desc };
@@ -1178,6 +1159,7 @@
           if(!data.ok) throw new Error(data.error || 'failed');
           await loadPosts();
         }catch(e){
+          if(editingPostId && e && (e.message === 'invalid-token' || e.message === 'no-token')) signOutStale();
           errEl.textContent = editingPostId
             ? authErrorMessage(e && e.message, '修改失敗，請確認網路連線')
             : '新增失敗，請確認後端網址是否正確';
