@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js" defer></script>
 <style>
   :root{
     --cream:#FFF6E8; --cream-deep:#FBE9CC;
@@ -255,23 +254,6 @@
   .crop-actions .btn{ padding:9px; font-size:13px; }
   .crop-hint{ font-size:11px; color:#A6947A; margin-top:6px; }
 
-  .ocr-box{ margin-top:8px; }
-  .ocr-lang-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
-  .ocr-lang-label{ font-size:11.5px; color:#7C9686; font-weight:700; }
-  .lang-chip{
-    border:1.5px solid #D9E8DD; background:var(--white); color:#8A9A8E; font-size:11.5px; font-weight:700;
-    padding:4px 10px; border-radius:999px; cursor:pointer; font-family:"Zen Maru Gothic",sans-serif; transition:.15s ease;
-  }
-  .lang-chip.sel{ background:var(--leaf); border-color:var(--leaf); color:#fff; }
-  .ocr-hint{ font-size:11.5px; color:#7C9686; margin-bottom:6px; }
-  .ocr-status{ font-size:12px; color:#A6947A; }
-  .ocr-chip{
-    display:inline-block; margin:0 6px 6px 0; padding:6px 12px; border-radius:999px;
-    background:#EFF7F1; color:var(--leaf-deep); font-size:12px; font-weight:700; border:none; cursor:pointer;
-    font-family:"Zen Maru Gothic",sans-serif; transition:background .15s ease;
-  }
-  .ocr-chip:hover{ background:#D9EFE0; }
-
   .modal-actions{ display:flex; gap:10px; margin-top:18px; }
   .btn{ flex:1; padding:12px; border-radius:14px; border:none; font-family:"Zen Maru Gothic",sans-serif; font-size:14.5px; font-weight:800; cursor:pointer; transition:transform .15s ease; }
   .btn.primary{ background:var(--leaf); color:#fff; box-shadow:0 3px 0 var(--leaf-deep); }
@@ -281,6 +263,15 @@
   .btn.ghost{ background:#EFEAE0; color:#6B7C71; }
   .btn.ghost:active{ transform:scale(.96); }
   .err{ color:#D8464E; font-size:12px; font-weight:700; margin-top:6px; min-height:16px; }
+  .draft-banner{
+    background:#FFF6DC; border:1.5px dashed var(--mush); border-radius:12px; padding:10px 12px;
+    font-size:12.5px; color:#8A6A1E; margin-bottom:14px; display:flex; align-items:center;
+    justify-content:space-between; gap:8px; flex-wrap:wrap;
+  }
+  .draft-banner button{
+    border:none; background:transparent; color:var(--leaf-deep); font-weight:800; font-size:12px;
+    cursor:pointer; font-family:"Zen Maru Gothic",sans-serif; text-decoration:underline;
+  }
 
   .toast{
     position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(20px);
@@ -469,7 +460,13 @@
     function decodeJwt(token){
       try{
         const base64Url = token.split('.')[1];
-        const base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+        let base64 = base64Url.replace(/-/g,'+').replace(/_/g,'/');
+        // JWT 的 base64url 片段通常不帶 padding，但 atob() 需要長度是 4 的倍數，
+        // 沒補齊會直接丟例外，導致整段解碼失敗（誤判成登入過期）。這裡手動補齊。
+        const pad = base64.length % 4;
+        if(pad === 2) base64 += '==';
+        else if(pad === 3) base64 += '=';
+        else if(pad !== 0) throw new Error('invalid base64 length');
         const json = decodeURIComponent(atob(base64).split('').map(c => '%' + ('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
         return JSON.parse(json);
       }catch(e){ return {}; }
@@ -737,8 +734,6 @@
     let pendingImg = null;
     let pendingCat = 'flower';
     let rawImageDataUrl = null;
-    let ocrLang = 'zh';
-    const OCR_LANG_MAP = { zh:'chi_tra+eng', ja:'jpn+eng', ko:'kor+eng', all:'chi_tra+jpn+kor+eng' };
     let cropRect = {x:0,y:0,w:0,h:0};
     let cropDisplayW = 0, cropDisplayH = 0, cropNaturalW = 0, cropNaturalH = 0;
     let cropHandlersBound = false;
@@ -748,7 +743,6 @@
       pendingImg = null;
       pendingCat = existingPost ? existingPost.cat : 'flower';
       rawImageDataUrl = null;
-      ocrLang = 'zh';
       cropHandlersBound = false;
       editingPostId = existingPost ? existingPost.id : null;
       const existingImageSrc = existingPost ? (existingPost.imageUrl || existingPost.img || '') : '';
@@ -758,6 +752,7 @@
         <div class="modal">
           <h2>${existingPost ? '✏️ 編輯地點' : '🌱 新增地點'}</h2>
           <p class="sub">${existingPost ? '修改這個地點的資訊，圖片沒換就會保留原本的' : '上傳明信片，記下座標與說明'}</p>
+          <div id="draftBanner"></div>
 
           <div class="field">
             <label>明信片圖片（選填）</label>
@@ -779,25 +774,11 @@
                 </div>
               </div>
               <div class="crop-hint" id="cropHint">拖曳框線調整範圍，或直接在圖片上拖曳畫出新的框選區</div>
-              <div class="crop-actions" style="margin-bottom:6px;">
-                <button type="button" id="cropSmartBtn" class="btn ghost">🪄 智慧裁剪</button>
-                <button type="button" id="cropResetBtn" class="btn ghost">↺ 重設</button>
-              </div>
               <div class="crop-actions">
+                <button type="button" id="cropResetBtn" class="btn ghost" style="flex:0 0 auto;">重設</button>
                 <button type="button" id="cropSkipBtn" class="btn ghost">使用原圖</button>
                 <button type="button" id="cropApplyBtn" class="btn primary">✂️ 完成裁剪</button>
               </div>
-            </div>
-
-            <div class="ocr-box" id="ocrBox">
-              <div class="ocr-lang-row" id="ocrLangRow">
-                <span class="ocr-lang-label">辨識語言：</span>
-                <button type="button" class="lang-chip sel" data-lang="zh">繁中</button>
-                <button type="button" class="lang-chip" data-lang="ja">日文</button>
-                <button type="button" class="lang-chip" data-lang="ko">韓文</button>
-                <button type="button" class="lang-chip" data-lang="all">全部（較慢）</button>
-              </div>
-              <div id="ocrResults"></div>
             </div>
           </div>
 
@@ -844,14 +825,15 @@
         document.getElementById('recropBtn').style.display = 'none'; // 既有圖片要換新的才能裁剪
       }
 
-      document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') closeModal(); });
-      document.getElementById('cancelBtn').addEventListener('click', closeModal);
+      document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') attemptCloseModal(); });
+      document.getElementById('cancelBtn').addEventListener('click', attemptCloseModal);
 
       document.getElementById('catChoice').addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if(!btn) return;
         pendingCat = btn.dataset.cat;
         document.querySelectorAll('#catChoice button').forEach(b => b.classList.toggle('sel', b===btn));
+        saveDraft();
       });
 
       document.getElementById('imgInput').addEventListener('change', handleImgSelect);
@@ -867,17 +849,92 @@
         cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
         updateCropBoxUI();
       });
-      document.getElementById('cropSmartBtn').addEventListener('click', trySmartCrop);
-      document.getElementById('ocrLangRow').addEventListener('click', (e) => {
-        const btn = e.target.closest('.lang-chip');
-        if(!btn) return;
-        ocrLang = btn.dataset.lang;
-        document.querySelectorAll('#ocrLangRow .lang-chip').forEach(b => b.classList.toggle('sel', b===btn));
-        if(rawImageDataUrl) runOcr(rawImageDataUrl);
+      let draftDebounce;
+      document.querySelector('.modal').addEventListener('input', () => {
+        clearTimeout(draftDebounce);
+        draftDebounce = setTimeout(saveDraft, 400);
       });
+      if(!existingPost) maybeRestoreDraft();
     }
 
     function closeModal(){ modalRoot.innerHTML = ''; }
+
+    function hasUnsavedChanges(){
+      const coordsEl = document.getElementById('coordsInput');
+      const countryEl = document.getElementById('countryInput');
+      const descEl = document.getElementById('descInput');
+      if(!coordsEl) return false;
+      const coords = coordsEl.value.trim();
+      const country = countryEl ? countryEl.value.trim() : '';
+      const desc = descEl ? descEl.value.trim() : '';
+      if(editingPostId){
+        const orig = posts.find(p => p.id === editingPostId) || {};
+        return coords !== (orig.coords||'') || country !== (orig.country||'') || desc !== (orig.desc||'') || pendingCat !== (orig.cat||'flower') || !!pendingImg;
+      }
+      return !!(coords || country || desc || pendingImg);
+    }
+
+    function attemptCloseModal(){
+      if(hasUnsavedChanges()){
+        if(!confirm('你有尚未送出的內容，確定要放棄嗎？')) return;
+      }
+      closeModal();
+    }
+
+    // ---------- 草稿（僅限「新增地點」，避免跟編輯中的原始資料混在一起） ----------
+    function saveDraft(){
+      if(editingPostId) return;
+      const coordsEl = document.getElementById('coordsInput');
+      if(!coordsEl) return;
+      const coords = coordsEl.value.trim();
+      const country = document.getElementById('countryInput').value.trim();
+      const desc = document.getElementById('descInput').value.trim();
+      if(!coords && !country && !desc && !pendingImg){
+        localStorage.removeItem('mapJournalDraft');
+        return;
+      }
+      try{
+        localStorage.setItem('mapJournalDraft', JSON.stringify({
+          coords, country, desc, cat: pendingCat, img: pendingImg || null, savedAt: Date.now()
+        }));
+      }catch(e){ /* 儲存失敗（可能圖片太大）就不強求，不影響操作 */ }
+    }
+
+    function maybeRestoreDraft(){
+      let draft;
+      try{ draft = JSON.parse(localStorage.getItem('mapJournalDraft') || 'null'); }
+      catch(e){ draft = null; }
+      if(!draft) return;
+      const hasContent = draft.coords || draft.country || draft.desc || draft.img;
+      if(!hasContent) return;
+
+      document.getElementById('coordsInput').value = draft.coords || '';
+      document.getElementById('countryInput').value = draft.country || '';
+      document.getElementById('descInput').value = draft.desc || '';
+      if(draft.cat){
+        pendingCat = draft.cat;
+        document.querySelectorAll('#catChoice button').forEach(b => b.classList.toggle('sel', b.dataset.cat === pendingCat));
+      }
+      if(draft.img){
+        pendingImg = draft.img;
+        rawImageDataUrl = draft.img; // 草稿沒有保留原始解析度，直接把壓縮過的圖當最終圖
+        const box = document.getElementById('uploadBox');
+        box.innerHTML = `<img src="${pendingImg}" alt="草稿圖片預覽"><input type="file" accept="image/*" id="imgInput">`;
+        document.getElementById('imgInput').addEventListener('change', handleImgSelect);
+        document.getElementById('recropBtn').style.display = 'inline-block';
+        document.getElementById('recropBtn').onclick = () => { if(rawImageDataUrl) openCropStage(rawImageDataUrl); };
+      }
+
+      const banner = document.getElementById('draftBanner');
+      if(banner){
+        banner.innerHTML = `<div class="draft-banner">📝 已還原上次未完成的草稿 <button type="button" id="clearDraftBtn">清空重寫</button></div>`;
+        document.getElementById('clearDraftBtn').addEventListener('click', () => {
+          localStorage.removeItem('mapJournalDraft');
+          closeModal();
+          openModal();
+        });
+      }
+    }
 
     async function detectCountry(){
       const coordsVal = document.getElementById('coordsInput').value.trim();
@@ -893,6 +950,7 @@
         const data = await res.json();
         if(data && data.address && data.address.country){
           countryInput.value = data.address.country;
+          saveDraft();
         }
       }catch(e){ /* 偵測失敗就靜默，讓使用者自行輸入 */ }
       spinner.classList.remove('show');
@@ -903,11 +961,9 @@
       if(!file) return;
       const errEl = document.getElementById('formErr');
       errEl.textContent = '';
-      document.getElementById('ocrResults').innerHTML = '';
       const reader = new FileReader();
       reader.onload = function(ev){
         rawImageDataUrl = ev.target.result;
-        runOcr(rawImageDataUrl);
         openCropStage(rawImageDataUrl);
       };
       reader.onerror = function(){ errEl.textContent = '圖片讀取失敗，請換一張試試'; };
@@ -931,7 +987,6 @@
           cropDisplayH = cropImg.clientHeight;
           cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
           updateCropBoxUI();
-          trySmartCrop(true); // 圖片一載入就自動跑一次智慧裁剪建議
         });
       };
       cropImg.src = dataUrl;
@@ -945,78 +1000,6 @@
       box.style.top = cropRect.y + 'px';
       box.style.width = cropRect.w + 'px';
       box.style.height = cropRect.h + 'px';
-    }
-
-    // 用「局部細節量」粗略區分照片內容跟平面色塊 UI（例如集點卡的純色背景、大片文字底色），
-    // 找出畫面中「最有內容」的區域當作裁剪建議。這是簡易的影像分析，不是真正辨識照片主體，
-    // 遇到版面特殊的截圖可能抓不準，仍然可以手動調整。
-    function computeSmartCropRect(){
-      const cropImg = document.getElementById('cropImg');
-      if(!cropImg || !cropNaturalW || !cropNaturalH || !cropDisplayW || !cropDisplayH) return null;
-      try{
-        const ANALYSIS_W = 64;
-        const scale = ANALYSIS_W / cropNaturalW;
-        const analysisW = ANALYSIS_W;
-        const analysisH = Math.max(1, Math.round(cropNaturalH * scale));
-        const canvas = document.createElement('canvas');
-        canvas.width = analysisW; canvas.height = analysisH;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(cropImg, 0, 0, analysisW, analysisH);
-        const imgData = ctx.getImageData(0, 0, analysisW, analysisH).data;
-
-        const gray = new Float32Array(analysisW * analysisH);
-        for(let i=0;i<analysisW*analysisH;i++){
-          gray[i] = 0.299*imgData[i*4] + 0.587*imgData[i*4+1] + 0.114*imgData[i*4+2];
-        }
-        const detail = new Float32Array(analysisW * analysisH);
-        for(let y=0;y<analysisH;y++){
-          for(let x=0;x<analysisW;x++){
-            const idx = y*analysisW + x;
-            let diff = 0, count = 0;
-            if(x < analysisW-1){ diff += Math.abs(gray[idx] - gray[idx+1]); count++; }
-            if(y < analysisH-1){ diff += Math.abs(gray[idx] - gray[idx+analysisW]); count++; }
-            detail[idx] = count ? diff/count : 0;
-          }
-        }
-        const sorted = Float32Array.from(detail).sort();
-        const threshold = sorted[Math.floor(sorted.length * 0.45)];
-
-        let minX=analysisW, maxX=0, minY=analysisH, maxY=0, hasAny=false;
-        for(let y=0;y<analysisH;y++){
-          for(let x=0;x<analysisW;x++){
-            if(detail[y*analysisW+x] > threshold){
-              hasAny = true;
-              if(x<minX) minX=x; if(x>maxX) maxX=x;
-              if(y<minY) minY=y; if(y>maxY) maxY=y;
-            }
-          }
-        }
-        if(!hasAny) return null;
-
-        const rect = {
-          x: (minX/analysisW) * cropDisplayW,
-          y: (minY/analysisH) * cropDisplayH,
-          w: ((maxX-minX+1)/analysisW) * cropDisplayW,
-          h: ((maxY-minY+1)/analysisH) * cropDisplayH
-        };
-        if(rect.w < cropDisplayW*0.15 || rect.h < cropDisplayH*0.15) return null;
-        return rect;
-      }catch(e){
-        return null; // 分析失敗就放棄，保留目前框選
-      }
-    }
-
-    function trySmartCrop(silent){
-      const rect = computeSmartCropRect();
-      const hint = document.getElementById('cropHint');
-      if(rect){
-        cropRect = rect;
-        updateCropBoxUI();
-        if(hint) hint.textContent = '🪄 已自動抓出建議範圍，可以直接使用或再手動微調';
-        if(!silent) showToast('已重新分析裁剪範圍 🪄');
-      } else if(!silent){
-        showToast('沒有找到明顯的分界，麻煩手動框選喔');
-      }
     }
 
     function setupCropHandlers(){
@@ -1154,39 +1137,7 @@
       const recropBtn = document.getElementById('recropBtn');
       recropBtn.style.display = 'inline-block';
       recropBtn.onclick = () => { if(rawImageDataUrl) openCropStage(rawImageDataUrl); };
-    }
-
-    async function runOcr(dataUrl){
-      const ocrResults = document.getElementById('ocrResults');
-      if(!ocrResults || typeof Tesseract === 'undefined'){ return; }
-      ocrResults.innerHTML = '<span class="ocr-status">🔍 辨識圖片文字中…（第一次使用此語言需要下載語言資料，請稍候）</span>';
-      try{
-        const langCode = OCR_LANG_MAP[ocrLang] || OCR_LANG_MAP.zh;
-        const { data } = await Tesseract.recognize(dataUrl, langCode);
-        const currentResults = document.getElementById('ocrResults');
-        if(!currentResults) return; // 使用者可能已關閉視窗
-        const lines = (data.text || '')
-          .split('\n')
-          .map(s => s.trim())
-          .filter(s => s.length >= 2 && !/^[\d\s:.\-–—%]+$/.test(s));
-        const uniq = [...new Set(lines)].slice(0, 8);
-        if(uniq.length === 0){
-          currentResults.innerHTML = '<span class="ocr-status">沒有偵測到文字，可以手動輸入說明</span>';
-          return;
-        }
-        currentResults.innerHTML = '<div class="ocr-hint">🔍 偵測到以下文字，點一下帶入說明欄：</div>' +
-          uniq.map(t => `<button type="button" class="ocr-chip">${escapeHtml(t)}</button>`).join('');
-        currentResults.querySelectorAll('.ocr-chip').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const descEl = document.getElementById('descInput');
-            if(!descEl) return;
-            descEl.value = descEl.value ? descEl.value + ' ' + btn.textContent : btn.textContent;
-          });
-        });
-      }catch(e){
-        const currentResults = document.getElementById('ocrResults');
-        if(currentResults) currentResults.innerHTML = '<span class="ocr-status">辨識失敗，可以手動輸入說明</span>';
-      }
+      saveDraft();
     }
 
     async function submitPost(){
@@ -1251,6 +1202,7 @@
 
       closeModal();
       render();
+      if(!editingPostId) localStorage.removeItem('mapJournalDraft');
       showToast(editingPostId ? '已更新地點 ✏️' : '已新增地點 🌸');
     }
 
