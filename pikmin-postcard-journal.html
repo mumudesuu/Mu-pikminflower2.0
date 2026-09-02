@@ -125,6 +125,9 @@
   .chip.active[data-cat="flower"]{ background:var(--pink); color:#fff; box-shadow:0 3px 0 var(--pink-deep); }
   .chip.active[data-cat="mushroom"]{ background:var(--mush); color:#fff; box-shadow:0 3px 0 var(--mush-deep); }
   .chip.active[data-cat="hidden"]{ background:var(--purple); color:#fff; box-shadow:0 3px 0 var(--purple-deep); }
+  .chip.active[data-obt="all"]{ background:var(--ink); color:#fff; box-shadow:0 3px 0 rgba(43,70,54,.35); }
+  .chip.active[data-obt="got"]{ background:var(--leaf); color:#fff; box-shadow:0 3px 0 var(--leaf-deep); }
+  .chip.active[data-obt="not"]{ background:var(--mush); color:#fff; box-shadow:0 3px 0 var(--mush-deep); }
 
   .add-btn{
     border:none; background:linear-gradient(135deg, var(--leaf), var(--leaf-deep)); color:#fff;
@@ -182,6 +185,8 @@
   .obtained-label input:disabled{ cursor:not-allowed; opacity:.7; }
   .del-btn{ border:none; background:transparent; color:#C4B8A5; cursor:pointer; font-size:12px; padding:4px; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; }
   .del-btn:hover{ color:#D8464E; }
+  .edit-btn{ border:none; background:transparent; color:#8A9A8E; cursor:pointer; font-size:12px; padding:4px; font-family:"Zen Maru Gothic",sans-serif; font-weight:700; }
+  .edit-btn:hover{ color:var(--leaf-deep); }
 
   .empty-state{ grid-column:1/-1; text-align:center; padding:70px 20px; color:#7C9686; }
   .empty-state .emoji{ font-size:40px; display:block; margin-bottom:10px; }
@@ -338,6 +343,11 @@
         <button class="chip" data-cat="mushroom">🍄 菇點</button>
         <button class="chip" data-cat="hidden">✨ 隱藏點</button>
       </div>
+      <div class="filter-bar" id="obtainedFilters">
+        <button class="chip active" data-obt="all">全部狀態</button>
+        <button class="chip" data-obt="got">✅ 已取得</button>
+        <button class="chip" data-obt="not">⭕ 未取得</button>
+      </div>
       <button class="add-btn" id="openAdd" type="button">＋ 新增地點</button>
     </div>
 
@@ -408,6 +418,7 @@
     let currentUser = null; // { email, name, idToken }
 
     let activeCat = 'all';
+    let activeObtained = 'all';
     let searchTerm = '';
 
     const grid = document.getElementById('grid');
@@ -536,6 +547,8 @@
     // ---------- filtering / rendering ----------
     function matchesFilters(post){
       if(activeCat !== 'all' && post.cat !== activeCat) return false;
+      if(activeObtained === 'got' && !post.obtained) return false;
+      if(activeObtained === 'not' && post.obtained) return false;
       if(searchTerm){
         const hay = ((post.desc||'') + ' ' + (post.coords||'') + ' ' + (post.country||'')).toLowerCase();
         if(!hay.includes(searchTerm.toLowerCase())) return false;
@@ -582,7 +595,7 @@
                 <input type="checkbox" data-action="toggle" ${isGot?'checked':''} ${canEditObtained?'':'disabled'}>
                 ${canEditObtained ? '' : '🔒 '}${isGot ? '✅' : ''} 沐沐已取得
               </label>
-              ${canEditObtained ? '<button class="del-btn" data-action="delete" type="button">刪除</button>' : ''}
+              ${canEditObtained ? '<button class="edit-btn" data-action="edit" type="button">✏️ 編輯</button><button class="del-btn" data-action="delete" type="button">刪除</button>' : ''}
             </div>
           </div>
         </div>`;
@@ -607,6 +620,8 @@
         });
       } else if(e.target.closest('[data-action="delete"]')){
         if(confirm('確定要刪除這個地點嗎？')) deletePost(post);
+      } else if(e.target.closest('[data-action="edit"]')){
+        openModal(post);
       }
     });
 
@@ -667,13 +682,21 @@
       render();
     });
 
+    document.getElementById('obtainedFilters').addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if(!btn) return;
+      activeObtained = btn.dataset.obt;
+      document.querySelectorAll('#obtainedFilters .chip').forEach(p => p.classList.toggle('active', p===btn));
+      render();
+    });
+
     let searchDebounce;
     document.getElementById('searchInput').addEventListener('input', (e) => {
       clearTimeout(searchDebounce);
       searchDebounce = setTimeout(()=>{ searchTerm = e.target.value.trim(); render(); }, 150);
     });
 
-    // ---------- add modal ----------
+    // ---------- add / edit modal ----------
     const modalRoot = document.getElementById('modalRoot');
     let pendingImg = null;
     let pendingCat = 'flower';
@@ -683,24 +706,29 @@
     let cropRect = {x:0,y:0,w:0,h:0};
     let cropDisplayW = 0, cropDisplayH = 0, cropNaturalW = 0, cropNaturalH = 0;
     let cropHandlersBound = false;
+    let editingPostId = null;
 
-    function openModal(){
+    function openModal(existingPost){
       pendingImg = null;
-      pendingCat = 'flower';
+      pendingCat = existingPost ? existingPost.cat : 'flower';
       rawImageDataUrl = null;
       ocrLang = 'zh';
       cropHandlersBound = false;
+      editingPostId = existingPost ? existingPost.id : null;
+      const existingImageSrc = existingPost ? (existingPost.imageUrl || existingPost.img || '') : '';
+
       modalRoot.innerHTML = `
       <div class="overlay" id="overlay">
         <div class="modal">
-          <h2>🌱 新增地點</h2>
-          <p class="sub">上傳明信片，記下座標與說明</p>
+          <h2>${existingPost ? '✏️ 編輯地點' : '🌱 新增地點'}</h2>
+          <p class="sub">${existingPost ? '修改這個地點的資訊，圖片沒換就會保留原本的' : '上傳明信片，記下座標與說明'}</p>
 
           <div class="field">
             <label>明信片圖片（選填）</label>
             <div class="upload-box" id="uploadBox">
-              <span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span>
-              <input type="file" accept="image/*" id="imgInput">
+              ${existingImageSrc
+                ? `<img src="${existingImageSrc}" alt="目前圖片"><input type="file" accept="image/*" id="imgInput">`
+                : `<span id="uploadHint">📷 點擊或拖曳圖片到這裡上傳</span><input type="file" accept="image/*" id="imgInput">`}
             </div>
             <button type="button" class="recrop-btn" id="recropBtn">✂️ 重新裁剪</button>
 
@@ -736,14 +764,14 @@
 
           <div class="field">
             <label>座標</label>
-            <input type="text" id="coordsInput" placeholder="例如：23.5563, 121.0106">
+            <input type="text" id="coordsInput" placeholder="例如：23.5563, 121.0106" value="${escapeHtml(existingPost ? existingPost.coords || '' : '')}">
             <div class="hint">貼上遊戲內複製的座標即可；離開輸入框後會自動偵測國家</div>
           </div>
 
           <div class="field">
             <label>國家（自動偵測，可手動修改）</label>
             <div class="country-field-row">
-              <input type="text" id="countryInput" placeholder="輸入座標後自動帶出">
+              <input type="text" id="countryInput" placeholder="輸入座標後自動帶出" value="${escapeHtml(existingPost ? existingPost.country || '' : '')}">
               <span class="country-spinner" id="countrySpinner">偵測中…</span>
             </div>
           </div>
@@ -751,7 +779,7 @@
           <div class="field">
             <label>類型</label>
             <div class="cat-choice" id="catChoice">
-              <button type="button" class="sel" data-cat="flower">🌸 花點</button>
+              <button type="button" data-cat="flower">🌸 花點</button>
               <button type="button" data-cat="mushroom">🍄 菇點</button>
               <button type="button" data-cat="hidden">✨ 隱藏點</button>
             </div>
@@ -759,17 +787,23 @@
 
           <div class="field">
             <label>說明 / 關鍵字（選填）</label>
-            <textarea id="descInput" placeholder="例如：公園入口右側、限定花色…"></textarea>
+            <textarea id="descInput" placeholder="例如：公園入口右側、限定花色…">${escapeHtml(existingPost ? existingPost.desc || '' : '')}</textarea>
           </div>
 
           <div class="err" id="formErr"></div>
 
           <div class="modal-actions">
             <button class="btn ghost" id="cancelBtn" type="button">取消</button>
-            <button class="btn primary" id="submitBtn" type="button">新增地點</button>
+            <button class="btn primary" id="submitBtn" type="button">${existingPost ? '儲存修改' : '新增地點'}</button>
           </div>
         </div>
       </div>`;
+
+      document.querySelectorAll('#catChoice button').forEach(b => b.classList.toggle('sel', b.dataset.cat === pendingCat));
+
+      if(existingImageSrc){
+        document.getElementById('recropBtn').style.display = 'none'; // 既有圖片要換新的才能裁剪
+      }
 
       document.getElementById('overlay').addEventListener('click', (e) => { if(e.target.id === 'overlay') closeModal(); });
       document.getElementById('cancelBtn').addEventListener('click', closeModal);
@@ -785,7 +819,11 @@
       document.getElementById('coordsInput').addEventListener('blur', detectCountry);
       document.getElementById('submitBtn').addEventListener('click', submitPost);
       document.getElementById('cropApplyBtn').addEventListener('click', () => finalizeFromRect(cropRect));
-      document.getElementById('cropSkipBtn').addEventListener('click', () => finalizeFromRect({x:0, y:0, w:cropDisplayW, h:cropDisplayH}));
+      document.getElementById('cropSkipBtn').addEventListener('click', async () => {
+        try{ pendingImg = await compressDataUrl(rawImageDataUrl); }
+        catch(e){ pendingImg = rawImageDataUrl; }
+        finishImageStage();
+      });
       document.getElementById('cropResetBtn').addEventListener('click', () => {
         cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
         updateCropBoxUI();
@@ -943,21 +981,58 @@
     }
 
     function finalizeFromRect(rect){
-      if(rect.w < 10 || rect.h < 10){
-        rect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
-      }
-      const cropImg = document.getElementById('cropImg');
-      const scale = cropNaturalW / cropDisplayW;
-      const sx = rect.x * scale, sy = rect.y * scale, sw = rect.w * scale, sh = rect.h * scale;
-      const maxW = 640;
-      const destW = Math.min(sw, maxW);
-      const destH = sh * (destW / sw);
-      const canvas = document.createElement('canvas');
-      canvas.width = destW; canvas.height = destH;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, destW, destH);
-      pendingImg = canvas.toDataURL('image/jpeg', 0.7);
+      finalizeFromRectAsync(rect);
+    }
 
+    async function finalizeFromRectAsync(rect){
+      try{
+        if(!cropDisplayW || !cropNaturalW || rect.w < 10 || rect.h < 10){
+          throw new Error('crop-not-ready');
+        }
+        const cropImg = document.getElementById('cropImg');
+        const scale = cropNaturalW / cropDisplayW;
+        const sx = rect.x * scale, sy = rect.y * scale, sw = rect.w * scale, sh = rect.h * scale;
+        if(!isFinite(sw) || !isFinite(sh) || sw <= 0 || sh <= 0){
+          throw new Error('invalid-crop-size');
+        }
+        const maxW = 640;
+        const destW = Math.max(1, Math.round(Math.min(sw, maxW)));
+        const destH = Math.max(1, Math.round(sh * (destW / sw)));
+        const canvas = document.createElement('canvas');
+        canvas.width = destW; canvas.height = destH;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(cropImg, sx, sy, sw, sh, 0, 0, destW, destH);
+        pendingImg = canvas.toDataURL('image/jpeg', 0.7);
+      }catch(err){
+        // 裁剪計算失敗時，安全退回使用完整原圖，絕不讓照片不見
+        try{ pendingImg = await compressDataUrl(rawImageDataUrl); }
+        catch(e2){ pendingImg = rawImageDataUrl; }
+      }
+      finishImageStage();
+    }
+
+    // 直接把整張原圖壓縮成可儲存的大小，供「使用原圖」與送出前的保險機制共用
+    function compressDataUrl(dataUrl, maxW, quality){
+      maxW = maxW || 640; quality = quality || 0.7;
+      return new Promise((resolve, reject) => {
+        if(!dataUrl){ reject(new Error('no-image')); return; }
+        const img = new Image();
+        img.onload = () => {
+          const scale = Math.min(1, maxW / img.naturalWidth);
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+          canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          try{ resolve(canvas.toDataURL('image/jpeg', quality)); }
+          catch(e){ reject(e); }
+        };
+        img.onerror = () => reject(new Error('image-load-failed'));
+        img.src = dataUrl;
+      });
+    }
+
+    function finishImageStage(){
       document.getElementById('cropStage').style.display = 'none';
       const box = document.getElementById('uploadBox');
       box.style.display = 'block';
@@ -1009,24 +1084,42 @@
       if(!coords){ errEl.textContent = '請輸入座標'; return; }
       const submitBtn = document.getElementById('submitBtn');
       submitBtn.disabled = true;
-      submitBtn.textContent = '新增中…';
+      submitBtn.textContent = editingPostId ? '儲存中…' : '新增中…';
+
+      // 保險機制：如果選過圖片但因為某些原因裁剪流程沒跑完，送出前補做一次壓縮，絕不讓照片不見
+      if(!pendingImg && rawImageDataUrl){
+        try{ pendingImg = await compressDataUrl(rawImageDataUrl); }
+        catch(e){ pendingImg = rawImageDataUrl; }
+      }
 
       if(API_URL){
+        const payload = editingPostId
+          ? { action:'update', id:editingPostId, coords, country, cat:pendingCat, desc, idToken: currentUser ? currentUser.idToken : '' }
+          : { action:'add', coords, country, cat:pendingCat, desc };
+        if(pendingImg) payload.image = pendingImg; // 編輯時沒換圖片就不帶這欄，後端會保留原圖
         try{
           const res = await fetch(API_URL, {
             method:'POST',
             headers:{'Content-Type':'text/plain;charset=utf-8'},
-            body: JSON.stringify({ action:'add', coords, country, cat: pendingCat, desc, image: pendingImg })
+            body: JSON.stringify(payload)
           });
           const data = await res.json();
-          if(!data.ok) throw new Error();
+          if(!data.ok) throw new Error(data.error || 'failed');
           await loadPosts();
         }catch(e){
-          errEl.textContent = '新增失敗，請確認後端網址是否正確';
+          errEl.textContent = e && e.message === 'not authorized'
+            ? '只有管理員可以修改'
+            : (editingPostId ? '修改失敗，請確認網路連線' : '新增失敗，請確認後端網址是否正確');
           submitBtn.disabled = false;
-          submitBtn.textContent = '新增地點';
+          submitBtn.textContent = editingPostId ? '儲存修改' : '新增地點';
           return;
         }
+      } else if(editingPostId){
+        const idx = posts.findIndex(p => p.id === editingPostId);
+        if(idx > -1){
+          posts[idx] = { ...posts[idx], coords, country, cat:pendingCat, desc, img: pendingImg || posts[idx].img };
+        }
+        await savePostsLocal();
       } else {
         const post = {
           id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
@@ -1038,10 +1131,10 @@
 
       closeModal();
       render();
-      showToast('已新增地點 🌸');
+      showToast(editingPostId ? '已更新地點 ✏️' : '已新增地點 🌸');
     }
 
-    document.getElementById('openAdd').addEventListener('click', openModal);
+    document.getElementById('openAdd').addEventListener('click', () => openModal());
 
     initGoogleSignIn();
     loadPosts();
