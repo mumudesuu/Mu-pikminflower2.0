@@ -251,6 +251,13 @@
   .crop-hint{ font-size:11px; color:#A6947A; margin-top:6px; }
 
   .ocr-box{ margin-top:8px; }
+  .ocr-lang-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+  .ocr-lang-label{ font-size:11.5px; color:#7C9686; font-weight:700; }
+  .lang-chip{
+    border:1.5px solid #D9E8DD; background:var(--white); color:#8A9A8E; font-size:11.5px; font-weight:700;
+    padding:4px 10px; border-radius:999px; cursor:pointer; font-family:"Zen Maru Gothic",sans-serif; transition:.15s ease;
+  }
+  .lang-chip.sel{ background:var(--leaf); border-color:var(--leaf); color:#fff; }
   .ocr-hint{ font-size:11.5px; color:#7C9686; margin-bottom:6px; }
   .ocr-status{ font-size:12px; color:#A6947A; }
   .ocr-chip{
@@ -671,6 +678,8 @@
     let pendingImg = null;
     let pendingCat = 'flower';
     let rawImageDataUrl = null;
+    let ocrLang = 'zh';
+    const OCR_LANG_MAP = { zh:'chi_tra+eng', ja:'jpn+eng', ko:'kor+eng', all:'chi_tra+jpn+kor+eng' };
     let cropRect = {x:0,y:0,w:0,h:0};
     let cropDisplayW = 0, cropDisplayH = 0, cropNaturalW = 0, cropNaturalH = 0;
     let cropHandlersBound = false;
@@ -679,6 +688,7 @@
       pendingImg = null;
       pendingCat = 'flower';
       rawImageDataUrl = null;
+      ocrLang = 'zh';
       cropHandlersBound = false;
       modalRoot.innerHTML = `
       <div class="overlay" id="overlay">
@@ -712,7 +722,16 @@
               </div>
             </div>
 
-            <div class="ocr-box" id="ocrBox"></div>
+            <div class="ocr-box" id="ocrBox">
+              <div class="ocr-lang-row" id="ocrLangRow">
+                <span class="ocr-lang-label">辨識語言：</span>
+                <button type="button" class="lang-chip sel" data-lang="zh">繁中</button>
+                <button type="button" class="lang-chip" data-lang="ja">日文</button>
+                <button type="button" class="lang-chip" data-lang="ko">韓文</button>
+                <button type="button" class="lang-chip" data-lang="all">全部（較慢）</button>
+              </div>
+              <div id="ocrResults"></div>
+            </div>
           </div>
 
           <div class="field">
@@ -771,6 +790,13 @@
         cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
         updateCropBoxUI();
       });
+      document.getElementById('ocrLangRow').addEventListener('click', (e) => {
+        const btn = e.target.closest('.lang-chip');
+        if(!btn) return;
+        ocrLang = btn.dataset.lang;
+        document.querySelectorAll('#ocrLangRow .lang-chip').forEach(b => b.classList.toggle('sel', b===btn));
+        if(rawImageDataUrl) runOcr(rawImageDataUrl);
+      });
     }
 
     function closeModal(){ modalRoot.innerHTML = ''; }
@@ -799,7 +825,7 @@
       if(!file) return;
       const errEl = document.getElementById('formErr');
       errEl.textContent = '';
-      document.getElementById('ocrBox').innerHTML = '';
+      document.getElementById('ocrResults').innerHTML = '';
       const reader = new FileReader();
       reader.onload = function(ev){
         rawImageDataUrl = ev.target.result;
@@ -943,25 +969,26 @@
     }
 
     async function runOcr(dataUrl){
-      const ocrBox = document.getElementById('ocrBox');
-      if(!ocrBox || typeof Tesseract === 'undefined'){ return; }
-      ocrBox.innerHTML = '<span class="ocr-status">🔍 辨識圖片文字中…（第一次使用需要下載語言資料，請稍候）</span>';
+      const ocrResults = document.getElementById('ocrResults');
+      if(!ocrResults || typeof Tesseract === 'undefined'){ return; }
+      ocrResults.innerHTML = '<span class="ocr-status">🔍 辨識圖片文字中…（第一次使用此語言需要下載語言資料，請稍候）</span>';
       try{
-        const { data } = await Tesseract.recognize(dataUrl, 'chi_tra+eng');
-        const currentBox = document.getElementById('ocrBox');
-        if(!currentBox) return; // 使用者可能已關閉視窗
+        const langCode = OCR_LANG_MAP[ocrLang] || OCR_LANG_MAP.zh;
+        const { data } = await Tesseract.recognize(dataUrl, langCode);
+        const currentResults = document.getElementById('ocrResults');
+        if(!currentResults) return; // 使用者可能已關閉視窗
         const lines = (data.text || '')
           .split('\n')
           .map(s => s.trim())
           .filter(s => s.length >= 2 && !/^[\d\s:.\-–—%]+$/.test(s));
         const uniq = [...new Set(lines)].slice(0, 8);
         if(uniq.length === 0){
-          currentBox.innerHTML = '<span class="ocr-status">沒有偵測到文字，可以手動輸入說明</span>';
+          currentResults.innerHTML = '<span class="ocr-status">沒有偵測到文字，可以手動輸入說明</span>';
           return;
         }
-        currentBox.innerHTML = '<div class="ocr-hint">🔍 偵測到以下文字，點一下帶入說明欄：</div>' +
+        currentResults.innerHTML = '<div class="ocr-hint">🔍 偵測到以下文字，點一下帶入說明欄：</div>' +
           uniq.map(t => `<button type="button" class="ocr-chip">${escapeHtml(t)}</button>`).join('');
-        currentBox.querySelectorAll('.ocr-chip').forEach(btn => {
+        currentResults.querySelectorAll('.ocr-chip').forEach(btn => {
           btn.addEventListener('click', () => {
             const descEl = document.getElementById('descInput');
             if(!descEl) return;
@@ -969,8 +996,8 @@
           });
         });
       }catch(e){
-        const currentBox = document.getElementById('ocrBox');
-        if(currentBox) currentBox.innerHTML = '<span class="ocr-status">辨識失敗，可以手動輸入說明</span>';
+        const currentResults = document.getElementById('ocrResults');
+        if(currentResults) currentResults.innerHTML = '<span class="ocr-status">辨識失敗，可以手動輸入說明</span>';
       }
     }
 
