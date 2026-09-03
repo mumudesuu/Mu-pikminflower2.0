@@ -263,6 +263,24 @@
   .btn.ghost{ background:#EFEAE0; color:#6B7C71; }
   .btn.ghost:active{ transform:scale(.96); }
   .err{ color:#D8464E; font-size:12px; font-weight:700; margin-top:6px; min-height:16px; }
+  .keyword-toggle{
+    display:flex; align-items:center; gap:6px; background:none; border:none; cursor:pointer;
+    font-size:12.5px; font-weight:800; color:var(--leaf-deep); padding:6px 0; font-family:"Zen Maru Gothic",sans-serif;
+  }
+  .keyword-panel{
+    margin-top:6px; max-height:220px; overflow-y:auto; border:1.5px solid #D9E8DD; border-radius:12px;
+    padding:10px 12px; background:var(--white);
+  }
+  .keyword-group{ margin-bottom:10px; }
+  .keyword-group:last-child{ margin-bottom:0; }
+  .keyword-group-label{ font-size:11px; font-weight:800; color:#A6947A; margin-bottom:6px; }
+  .keyword-chip{
+    display:inline-block; margin:0 5px 5px 0; padding:5px 11px; border-radius:999px;
+    background:#EFF7F1; color:var(--leaf-deep); font-size:12px; font-weight:700; border:none; cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif; transition:background .15s ease, color .15s ease;
+  }
+  .keyword-chip:hover{ background:#D9EFE0; }
+  .keyword-chip.selected{ background:var(--leaf); color:#fff; }
   .draft-banner{
     background:#FFF6DC; border:1.5px dashed var(--mush); border-radius:12px; padding:10px 12px;
     font-size:12.5px; color:#8A6A1E; margin-bottom:14px; display:flex; align-items:center;
@@ -403,6 +421,23 @@
   // =========================================================
   function initApp(){
     const CATS = { flower:{label:'花點', icon:'🌸'}, mushroom:{label:'菇點', icon:'🍄'}, hidden:{label:'隱藏點', icon:'✨'} };
+
+    const KEYWORD_CATEGORIES = [
+      { label:'自然景觀', words:['花朵','雪','日落','日出','天空','櫻花','森林','海灘','海','河流','瀑布','海灣','沙漠','島嶼','山','岩石','洞穴','月亮','冰','樹木','池塘','湖泊','彩虹','草地','雨','星星','銀河','太陽','海浪','極光','蘑菇','星球','太空'] },
+      { label:'動物', words:['動物','狗','貓','青蛙','烏龜','馬','鹿','牛','龍','恐龍','魚','老虎','大象','鳥','鴨子','海豚','螃蟹','狐狸'] },
+      { label:'建築地標', words:['咖啡館','花園','噴泉','城堡','市集','公園','神社','雕像','街頭藝術','寺廟','高塔','博物館','房子','城市','教堂','金字塔','度假村','風車','摩天輪','十字架','街道','小巷','窗戶','門','椅子','書本','壁畫'] },
+      { label:'交通工具', words:['火車','火車站','橋樑','自行車','小船','巴士','纜車','汽車','飛機','熱氣球','道路','坦克'] },
+      { label:'人物角色', words:['人物','卡通','動畫','彩繪','迪士尼','史努比','航海王','鬼滅之刃','寶可夢','瑪利歐','史迪奇','吉卜力','皮卡丘','小王子','公主','丘比特','童話','藝術'] },
+      { label:'生活物品', words:['燈光','傳單','球','玩具','茶','咖啡','香蕉','可口可樂','販賣機','氣球','翅膀','時鐘','鞦韆'] },
+      { label:'節慶活動', words:['節慶','夜景','運動','游泳池','生日','愛','愛心','生日快樂','煙火'] }
+    ];
+    function buildKeywordPanelHTML(){
+      return KEYWORD_CATEGORIES.map(cat => `
+        <div class="keyword-group">
+          <div class="keyword-group-label">${cat.label}</div>
+          ${cat.words.map(w => `<button type="button" class="keyword-chip" data-kw="${w}">${w}</button>`).join('')}
+        </div>`).join('');
+    }
 
     let posts = [];
     let obtainedMap = {}; // 僅在「暫存模式」使用
@@ -572,7 +607,8 @@
     }
 
     function render(){
-      const filtered = posts.filter(matchesFilters);
+      const filtered = posts.filter(matchesFilters)
+        .sort((a, b) => (a.expired ? 1 : 0) - (b.expired ? 1 : 0));
       const gotCount = posts.filter(p => p.obtained).length;
       statPill.textContent = `🌱 共 ${posts.length} 個地點・已取得 ${gotCount} 個` + (filtered.length !== posts.length ? `・顯示 ${filtered.length} 個` : '');
 
@@ -590,6 +626,7 @@
 
       grid.innerHTML = filtered.map((post, i) => {
         const isGot = !!post.obtained;
+        const isExpired = !!post.expired;
         const src = post.imageUrl || post.img;
         const img = src ? `<img class="thumb" src="${src}" alt="明信片">` : `<div class="thumb-empty">🌱 未提供圖片</div>`;
         return `
@@ -607,8 +644,12 @@
             ${post.desc ? `<p class="desc">${escapeHtml(post.desc)}</p>` : ''}
             <div class="card-footer">
               <label class="obtained-label ${isGot?'on':''} ${canEditObtained?'editable':''}">
-                <input type="checkbox" data-action="toggle" ${isGot?'checked':''} ${canEditObtained?'':'disabled'}>
-                ${canEditObtained ? '' : '🔒 '}${isGot ? '✅' : ''} 沐沐已取得
+                <input type="checkbox" data-action="toggle" data-field="obtained" ${isGot?'checked':''} ${canEditObtained?'':'disabled'}>
+                ${isGot ? '✅' : ''} 沐沐已取得
+              </label>
+              <label class="obtained-label ${isExpired?'on':''} ${canEditObtained?'editable':''}">
+                <input type="checkbox" data-action="toggle" data-field="expired" ${isExpired?'checked':''} ${canEditObtained?'':'disabled'}>
+                已過期
               </label>
               ${canEditObtained ? '<button class="edit-btn" data-action="edit" type="button">✏️ 編輯</button><button class="del-btn" data-action="delete" type="button">刪除</button>' : ''}
             </div>
@@ -642,12 +683,13 @@
 
     grid.addEventListener('change', async (e) => {
       if(e.target.dataset.action === 'toggle'){
+        const field = e.target.dataset.field === 'expired' ? 'expired' : 'obtained';
         const card = e.target.closest('.card');
         const id = card.dataset.id;
         const post = posts.find(p => String(p.id) === id);
         const newVal = e.target.checked;
 
-        post.obtained = newVal;
+        post[field] = newVal;
         render();
 
         if(API_URL){
@@ -655,18 +697,20 @@
             const res = await fetch(API_URL, {
               method:'POST',
               headers:{'Content-Type':'text/plain;charset=utf-8'},
-              body: JSON.stringify({ action:'toggle', id, value:newVal, idToken: currentUser ? currentUser.idToken : '' })
+              body: JSON.stringify({ action:'toggle', id, field, value:newVal, idToken: currentUser ? currentUser.idToken : '' })
             });
             const data = await res.json();
             if(!data.ok) throw new Error(data.error || 'failed');
           }catch(err){
             if(err && (err.message === 'invalid-token' || err.message === 'no-token')) signOutStale();
             showToast(authErrorMessage(err && err.message, '同步失敗，請檢查網路連線'));
-            post.obtained = !newVal; render();
+            post[field] = !newVal; render();
           }
-        } else {
+        } else if(field === 'obtained'){
           obtainedMap[id] = newVal;
           await saveObtainedLocal();
+        } else {
+          await savePostsLocal(); // expired 直接存在 post 物件上（跟 coords/desc 一樣是共用資料，不是個人化狀態）
         }
       }
     });
@@ -796,6 +840,12 @@
           <div class="field">
             <label>說明 / 關鍵字（選填）</label>
             <textarea id="descInput" placeholder="例如：公園入口右側、限定花色…">${escapeHtml(existingPost ? existingPost.desc || '' : '')}</textarea>
+            <button type="button" class="keyword-toggle" id="keywordToggle">
+              <span id="keywordToggleIcon">▸</span> 關鍵字選項
+            </button>
+            <div class="keyword-panel" id="keywordPanel" style="display:none;">
+              ${buildKeywordPanelHTML()}
+            </div>
           </div>
 
           <div class="err" id="formErr"></div>
@@ -837,12 +887,47 @@
         cropRect = {x:0, y:0, w:cropDisplayW, h:cropDisplayH};
         updateCropBoxUI();
       });
+      document.getElementById('keywordToggle').addEventListener('click', () => {
+        const panel = document.getElementById('keywordPanel');
+        const icon = document.getElementById('keywordToggleIcon');
+        const isOpen = panel.style.display !== 'none';
+        panel.style.display = isOpen ? 'none' : 'block';
+        icon.textContent = isOpen ? '▸' : '▾';
+        if(!isOpen) refreshKeywordChipStates();
+      });
+      document.getElementById('keywordPanel').addEventListener('click', (e) => {
+        const chip = e.target.closest('.keyword-chip');
+        if(!chip) return;
+        toggleKeywordTag(chip.dataset.kw);
+      });
       let draftDebounce;
       document.querySelector('.modal').addEventListener('input', () => {
         clearTimeout(draftDebounce);
         draftDebounce = setTimeout(saveDraft, 400);
       });
       if(!existingPost) maybeRestoreDraft();
+    }
+
+    function toggleKeywordTag(kw){
+      const descEl = document.getElementById('descInput');
+      if(!descEl) return;
+      const tag = '#' + kw;
+      const tokens = descEl.value.split(/\s+/).filter(Boolean);
+      const idx = tokens.indexOf(tag);
+      if(idx > -1) tokens.splice(idx, 1);
+      else tokens.push(tag);
+      descEl.value = tokens.join(' ');
+      refreshKeywordChipStates();
+      saveDraft();
+    }
+
+    function refreshKeywordChipStates(){
+      const descEl = document.getElementById('descInput');
+      if(!descEl) return;
+      const tokens = new Set(descEl.value.split(/\s+/).filter(Boolean));
+      document.querySelectorAll('.keyword-chip').forEach(chip => {
+        chip.classList.toggle('selected', tokens.has('#' + chip.dataset.kw));
+      });
     }
 
     function closeModal(){ modalRoot.innerHTML = ''; }
