@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🧭 座標剪貼簿</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FFF6E8;
+    --cream-deep:#FBE9CC;
+    --leaf:#3E9166;
+    --leaf-deep:#276148;
+    --ink:#2B4636;
+    --pink:#FF7FA8;
+    --pink-deep:#E85D8D;
+    --yellow:#FFC93C;
+    --sky:#5FC1DE;
+    --sky-deep:#2C7A93;
+    --purple:#B080E0;
+    --purple-deep:#6B4A9A;
+    --white:#FFFFFF;
+    --card-shadow: 0 6px 0 rgba(39,97,72,0.14);
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+
+  body{
+    margin:0;
+    font-family:"Zen Maru Gothic","Noto Sans TC",sans-serif;
+    background:
+      radial-gradient(circle at 10% 15%, rgba(255,201,60,0.18), transparent 40%),
+      radial-gradient(circle at 90% 10%, rgba(255,127,168,0.16), transparent 45%),
+      radial-gradient(circle at 50% 90%, rgba(95,193,222,0.15), transparent 40%),
+      var(--cream);
+    color:var(--ink);
+    min-height:100vh;
+    overflow-x:hidden;
+  }
+
+  .drift{
+    position:fixed;
+    pointer-events:none;
+    z-index:0;
+    opacity:0.5;
+    animation: drift 9s ease-in-out infinite;
+    font-size: clamp(20px, 3vw, 32px);
+  }
+  .drift.d1{ top:8%; left:4%; animation-delay:0s;}
+  .drift.d2{ top:62%; left:2%; animation-delay:1.5s;}
+  .drift.d3{ top:18%; right:5%; animation-delay:0.7s;}
+  .drift.d4{ top:72%; right:6%; animation-delay:2.2s;}
+  .drift.d5{ top:40%; left:1%; animation-delay:3s; font-size:18px;}
+  @keyframes drift{
+    0%,100%{ transform: translateY(0) rotate(-4deg);}
+    50%{ transform: translateY(-20px) rotate(6deg);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important;}
+  }
+
+  .wrap{
+    position:relative;
+    z-index:1;
+    max-width:1120px;
+    margin:0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  .bloom-strip{
+    display:flex;
+    justify-content:center;
+    gap:10px;
+    margin-bottom:6px;
+    flex-wrap:wrap;
+  }
+  .bloom-strip span{
+    display:inline-block;
+    font-size: clamp(18px,2.4vw,26px);
+    transform: scale(0);
+    animation: bloom-pop 0.6s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  .bloom-strip span:nth-child(1){animation-delay:.05s;}
+  .bloom-strip span:nth-child(2){animation-delay:.15s;}
+  .bloom-strip span:nth-child(3){animation-delay:.25s;}
+  .bloom-strip span:nth-child(4){animation-delay:.35s;}
+  .bloom-strip span:nth-child(5){animation-delay:.45s;}
+  .bloom-strip span:nth-child(6){animation-delay:.55s;}
+  .bloom-strip span:nth-child(7){animation-delay:.65s;}
+  @keyframes bloom-pop{
+    0%{ transform: scale(0) rotate(-30deg); opacity:0;}
+    70%{ transform: scale(1.25) rotate(8deg); opacity:1;}
+    100%{ transform: scale(1) rotate(0deg); opacity:1;}
+  }
+
+  header{ text-align:center; margin-bottom: 22px; }
+  .mascot{
+    display:inline-flex; align-items:center; justify-content:center;
+    font-size:52px;
+    margin-bottom:4px;
+    animation: bob 2.4s ease-in-out infinite;
+  }
+  @keyframes bob{
+    0%,100%{ transform: translateY(0) rotate(-3deg);}
+    50%{ transform: translateY(-8px) rotate(3deg);}
+  }
+  h1{
+    font-family:"Baloo 2","Zen Maru Gothic",sans-serif;
+    font-weight:800;
+    font-size: clamp(28px, 5vw, 42px);
+    margin: 4px 0 8px;
+    color: var(--leaf-deep);
+    letter-spacing: 1px;
+    text-shadow: 3px 3px 0 var(--white), 3px 3px 0 var(--white);
+  }
+  header p.sub{
+    font-size: clamp(13px, 1.8vw, 16px);
+    color: #5C7B6A;
+    margin:0;
+    font-weight:500;
+  }
+  .stats-pill{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:14px;
+    background: var(--white);
+    border: 2px dashed var(--leaf);
+    color: var(--leaf-deep);
+    padding: 6px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight:700;
+  }
+  .stats-pill b{ font-family:"Baloo 2",sans-serif; font-size:15px;}
+  .backend-hint{
+    margin-top:10px;
+    font-size:12px;
+    color:#A6947A;
+  }
+  .backend-hint.error{ color:#C1454D; font-weight:700; }
+  .backend-hint a{ color: var(--sky-deep); font-weight:700; }
+
+  /* ---------- toolbar ---------- */
+  .toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin: 26px 0 16px;
+    align-items:center;
+  }
+  #searchInput{
+    flex:1;
+    min-width:200px;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-size:14px;
+    font-weight:600;
+    padding: 11px 16px;
+    border-radius: 999px;
+    border: 2px solid #E6DCC8;
+    outline:none;
+    background: var(--white);
+    color: var(--ink);
+    transition: border-color .15s ease;
+  }
+  #searchInput:focus{ border-color: var(--leaf);}
+  #searchInput::placeholder{ color:#B9AF98; }
+
+  .toolbar-actions{ display:flex; gap:8px; flex-wrap:wrap; }
+  .btn-primary, .btn-secondary{
+    border:none;
+    cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    padding: 11px 18px;
+    border-radius: 999px;
+    transition: transform .15s ease, box-shadow .15s ease, filter .15s ease;
+    white-space:nowrap;
+  }
+  .btn-primary{
+    background: var(--leaf);
+    color:#fff;
+    box-shadow: 0 3px 0 var(--leaf-deep);
+  }
+  .btn-primary:hover{ transform: translateY(-2px); }
+  .btn-primary:active{ transform: translateY(1px); box-shadow:0 1px 0 var(--leaf-deep);}
+  .btn-secondary{
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 0 3px 0 rgba(43,70,54,0.15);
+  }
+  .btn-secondary:hover{ transform: translateY(-2px); }
+  .btn-secondary:active{ transform: translateY(1px); box-shadow:0 1px 0 rgba(43,70,54,0.15);}
+  .btn-secondary.danger{ color:#C1454D; }
+
+  .sort-select{
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:700;
+    font-size:13px;
+    padding:10px 14px;
+    border-radius:999px;
+    border:2px solid #E6DCC8;
+    background: var(--white);
+    color: var(--ink);
+    cursor:pointer;
+    outline:none;
+  }
+
+  /* ---------- filter chips ---------- */
+  .filter-bar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    justify-content:center;
+    margin: 18px 0 14px;
+  }
+  .chip{
+    border: none;
+    cursor:pointer;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:700;
+    font-size:14px;
+    padding: 9px 18px;
+    border-radius: 999px;
+    background: var(--white);
+    color: var(--ink);
+    box-shadow: 0 3px 0 rgba(43,70,54,0.15);
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition: transform .15s ease, box-shadow .15s ease, background .15s ease, color .15s ease;
+  }
+  .chip:hover{ transform: translateY(-2px);}
+  .chip.active{ color:#fff; }
+  .chip.active[data-cat="all"]{ background: var(--ink); box-shadow:0 3px 0 #16261c;}
+  .chip.active[data-cat="city"]{ background: var(--sky); box-shadow:0 3px 0 var(--sky-deep);}
+  .chip.active[data-cat="airport"]{ background: var(--purple); box-shadow:0 3px 0 var(--purple-deep);}
+  .chip.active[data-cat="point"]{ background: var(--pink); box-shadow:0 3px 0 var(--pink-deep);}
+  .chip .count{
+    font-family:"Baloo 2",sans-serif;
+    font-size:11.5px;
+    background: rgba(0,0,0,0.08);
+    padding:1px 7px;
+    border-radius:999px;
+  }
+  .chip.active .count{ background: rgba(255,255,255,0.28); }
+
+  .sub-filter{ margin-top:-6px; }
+  #subCategorySelect{
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:700;
+    font-size:13.5px;
+    padding: 10px 16px;
+    border-radius: 999px;
+    border: 2px dashed var(--pink);
+    background: var(--white);
+    color: var(--pink-deep);
+    cursor:pointer;
+    outline:none;
+    max-width: 100%;
+  }
+
+  /* ---------- cards grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .card{
+    background: var(--white);
+    border-radius: 22px;
+    padding: 18px 18px 16px;
+    box-shadow: var(--card-shadow);
+    border: 3px solid rgba(39,97,72,0.06);
+    position:relative;
+    transition: transform .2s ease, box-shadow .2s ease;
+    opacity:0;
+    transform: translateY(14px) scale(.97);
+    animation: card-in .5s ease forwards;
+  }
+  .card:hover{ transform: translateY(-4px); box-shadow: 0 10px 0 rgba(39,97,72,0.14); }
+  @keyframes card-in{ to{ opacity:1; transform: translateY(0) scale(1);} }
+
+  .card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:8px;
+    margin-bottom: 10px;
+  }
+  .card-name{
+    font-family:"Baloo 2",sans-serif;
+    font-weight:700;
+    font-size: 17px;
+    color: var(--leaf-deep);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    word-break: break-word;
+  }
+  .cat-badge{
+    flex-shrink:0;
+    font-size:11.5px;
+    font-weight:700;
+    padding: 5px 11px;
+    border-radius: 999px;
+    color:#fff;
+    white-space:nowrap;
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+  .cat-badge.city{ background: var(--sky); }
+  .cat-badge.airport{ background: var(--purple); }
+  .cat-badge.point{ background: var(--pink); }
+
+  .sub-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:12px;
+    font-weight:700;
+    color: var(--pink-deep);
+    background:#FFF0F5;
+    padding:3px 10px;
+    border-radius:999px;
+    margin-bottom:10px;
+  }
+
+  .coord-box{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background: var(--cream-deep);
+    border: 2px dashed #E3C48F;
+    border-radius: 14px;
+    padding: 8px 10px 8px 14px;
+    gap:8px;
+    margin-bottom: 10px;
+    flex-wrap:wrap;
+  }
+  .coord-box code{
+    font-family: "Baloo 2", monospace;
+    font-size: 12.5px;
+    color:#7A5A2C;
+    font-weight:600;
+    word-break: break-all;
+    flex:1;
+    min-width:80px;
+  }
+  .copy-btn{
+    flex-shrink:0;
+    border:none;
+    background: var(--yellow);
+    color:#6B4A00;
+    font-weight:800;
+    font-size:11.5px;
+    padding:7px 12px;
+    border-radius: 10px;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .copy-btn:hover{ background:#FFD966; transform: translateY(-1px); }
+  .copy-btn:active{ transform: translateY(1px) scale(.95); }
+  .copy-btn.copied{ background: var(--leaf); color:#fff; }
+
+  .info-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:700;
+    margin-bottom:8px;
+    padding:7px 12px;
+    border-radius:12px;
+    background:#EFF7F1;
+    color: var(--leaf-deep);
+    flex-wrap:wrap;
+  }
+  .info-row.geo-pending{ background:#F3F1EA; color:#9A8F72; font-weight:600; }
+  .info-row .time-val{
+    margin-left:auto;
+    font-family:"Baloo 2",monospace;
+    font-size:14.5px;
+    letter-spacing:0.3px;
+  }
+  .retry-btn{
+    border:none;
+    background: var(--sky);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    padding:4px 10px;
+    border-radius:999px;
+    cursor:pointer;
+    margin-left:auto;
+  }
+  .retry-btn:hover{ background: var(--sky-deep); }
+
+  .note{
+    font-size:12.5px;
+    color:#8A7A5E;
+    background: #FFF9EE;
+    border-left: 3px solid var(--yellow);
+    padding: 6px 10px;
+    border-radius: 0 10px 10px 0;
+    line-height:1.6;
+    margin-bottom:10px;
+    word-break: break-word;
+  }
+
+  .card-actions{ display:flex; gap:8px; }
+  .share-btn{
+    flex:1;
+    border:none;
+    background: linear-gradient(135deg, var(--sky), var(--purple));
+    color:#fff;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-weight:800;
+    font-size:12.5px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .15s ease, filter .15s ease;
+  }
+  .share-btn:hover{ filter:brightness(1.06); transform: translateY(-1px); }
+  .share-btn:active{ transform: translateY(1px) scale(.98); }
+  .share-btn.copied{ background: var(--leaf); }
+  .delete-btn{
+    border:none;
+    background: #FDEAEA;
+    color:#C1454D;
+    font-weight:800;
+    font-size:12.5px;
+    padding: 9px 14px;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .delete-btn:hover{ background:#FBDCDC; transform: translateY(-1px); }
+  .delete-btn:active{ transform: translateY(1px) scale(.95); }
+
+  .empty{
+    text-align:center;
+    grid-column: 1/-1;
+    padding: 60px 20px;
+    color:#7C9686;
+    font-weight:600;
+  }
+  .empty .emoji{ font-size:44px; display:block; margin-bottom:12px;}
+
+  /* ---------- modal ---------- */
+  .modal-overlay{
+    position:fixed;
+    inset:0;
+    background: rgba(43,70,54,0.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:50;
+    padding:20px;
+  }
+  .modal-box{
+    background: var(--white);
+    border-radius: 22px;
+    padding: 26px 24px;
+    max-width: 380px;
+    width:100%;
+    max-height: 88vh;
+    overflow-y:auto;
+    box-shadow: 0 10px 0 rgba(39,97,72,0.18);
+  }
+  .modal-box h3{
+    font-family:"Baloo 2",sans-serif;
+    color: var(--leaf-deep);
+    margin: 0 0 16px;
+    font-size:20px;
+    text-align:center;
+  }
+  .modal-box label{
+    display:block;
+    font-size:12.5px;
+    font-weight:700;
+    color:#7C9686;
+    margin: 12px 0 5px;
+  }
+  .modal-box input[type="text"], .modal-box select, .modal-box textarea{
+    width:100%;
+    box-sizing:border-box;
+    font-family:"Zen Maru Gothic",sans-serif;
+    font-size:14px;
+    font-weight:600;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 2px solid #E6DCC8;
+    outline:none;
+    color: var(--ink);
+    background:#FFFCF6;
+  }
+  .modal-box input[type="text"]:focus, .modal-box select:focus, .modal-box textarea:focus{ border-color: var(--leaf); }
+  .modal-box textarea{ resize:vertical; min-height:56px; font-weight:500; }
+  .coord-hint{ font-size:11px; color:#B9820A; margin-top:4px; min-height:14px; }
+  .modal-error{
+    font-size:12px;
+    color:#D8464E;
+    font-weight:700;
+    min-height:16px;
+    margin-top:10px;
+  }
+  .modal-actions{ display:flex; gap:10px; margin-top:14px; }
+  .modal-actions button{
+    flex:1;
+    border:none;
+    font-family: inherit;
+    font-weight:700;
+    font-size:14px;
+    padding:11px 0;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .15s ease;
+  }
+  .modal-actions .confirm{ background: var(--leaf); color:#fff; }
+  .modal-actions .cancel{ background: #EFEAE0; color:#6B7C71; }
+  .modal-actions button:active{ transform: scale(.96); }
+
+  footer.credit{
+    text-align:center;
+    margin-top: 40px;
+    font-size:12px;
+    color:#9AA88E;
+    line-height:1.8;
+  }
+
+  @media (max-width:520px){
+    .filter-bar{ gap:8px; }
+    .chip{ padding:7px 14px; font-size:13px; }
+    .toolbar{ flex-direction:column; align-items:stretch; }
+    .toolbar-actions{ justify-content:stretch; }
+    .toolbar-actions button{ flex:1; }
+  }
+</style>
+</head>
+<body>
+
+<span class="drift d1">🧭</span>
+<span class="drift d2">🗺️</span>
+<span class="drift d3">✈️</span>
+<span class="drift d4">📍</span>
+<span class="drift d5">🌐</span>
+
+<div class="wrap">
+
+  <div class="bloom-strip">
+    <span>🏙️</span><span>🛫</span><span>🍽️</span><span>☕</span><span>🌲</span><span>⛩️</span><span>🎢</span>
+  </div>
+
+  <header>
+    <div class="mascot">🧭</div>
+    <h1>座標剪貼簿</h1>
+    <p class="sub">收集城市・機場・各種特色地點的座標小天地</p>
+    <div class="stats-pill">🗂️ 共收藏 <b id="totalCount">0</b> 個地點</div>
+    <div class="backend-hint" id="backendHint"></div>
+  </header>
+
+  <div class="toolbar">
+    <input id="searchInput" type="text" placeholder="🔍 搜尋名稱、座標、國家或備註...">
+    <select id="sortSelect" class="sort-select">
+      <option value="new">🆕 最新加入</option>
+      <option value="old">⏳ 最舊加入</option>
+      <option value="name">🔤 名稱排序</option>
+    </select>
+    <div class="toolbar-actions">
+      <button id="addBtn" class="btn-primary">➕ 新增地點</button>
+      <button id="refreshBtn" class="btn-secondary">🔄 重新整理</button>
+      <button id="sheetLinkBtn" class="btn-secondary" style="display:none;">📝 開啟 Google Sheet</button>
+    </div>
+  </div>
+
+  <div class="filter-bar" id="mainFilterBar"></div>
+  <div class="filter-bar sub-filter" id="subFilterWrap" style="display:none;">
+    <select id="subCategorySelect"></select>
+  </div>
+
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="emptyState" style="display:none;">
+    <span class="emoji">🗂️</span>
+    <div id="emptyText">目前還沒有收藏的地點，點擊上方「➕ 新增地點」開始蒐集吧！</div>
+  </div>
+
+  <footer class="credit">
+    所有地點都儲存在同一份 Google 試算表裡，任何裝置打開這個網頁都會看到一樣的內容。<br>
+    想要大量新增資料，也可以直接到 Google Sheet 裡貼上多筆資料，重新整理後就會自動出現在這裡並補上國家與時區。<br>
+    國家 / 地區資訊由 OpenStreetMap Nominatim 提供，時區推算為離線計算，實際時間可能有些微誤差。
+  </footer>
+</div>
+
+<!-- Add Modal -->
+<div class="modal-overlay" id="modalOverlay" style="display:none;">
+  <div class="modal-box">
+    <h3>➕ 新增地點</h3>
+
+    <label>主分類</label>
+    <select id="mainCatSelect">
+      <option value="city">🏙️ 城市</option>
+      <option value="airport">🛫 機場代碼</option>
+      <option value="point">📍 純點</option>
+    </select>
+
+    <div id="subCatFieldWrap" style="display:none;">
+      <label>細分類</label>
+      <select id="modalSubCatSelect"></select>
+    </div>
+
+    <label>名稱</label>
+    <input id="nameInput" type="text" placeholder="例如：東京 / HND / 藍瓶咖啡 澀谷店">
+
+    <label>座標（緯度, 經度）</label>
+    <input id="coordInput" type="text" placeholder="例如：35.6586, 139.7454">
+    <div class="coord-hint" id="coordHint">貼上「緯度, 經度」格式即可，儲存後會自動查詢國家與當地時間</div>
+
+    <label>備註（選填）</label>
+    <textarea id="notesInput" placeholder="任何想記錄的小筆記..."></textarea>
+
+    <div class="modal-error" id="modalError"></div>
+    <div class="modal-actions">
+      <button class="cancel" id="modalCancelBtn">取消</button>
+      <button class="confirm" id="modalSaveBtn">儲存</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/tz-lookup/tz.js"></script>
+<script>
+(function(){
+
+  // ---------- 分類定義 ----------
+  const MAIN_CATS = {
+    city:    { label:'城市',     emoji:'🏙️' },
+    airport: { label:'機場代碼', emoji:'🛫' },
+    point:   { label:'純點',     emoji:'📍' }
+  };
+
+  const SUBCAT_GROUPS = [
+    { group:'🍜 飲食', items:[
+      { key:'restaurant', label:'餐廳',     emoji:'🍽️' },
+      { key:'cafe',       label:'咖啡店',   emoji:'☕' },
+      { key:'candy',      label:'糖果店',   emoji:'🍬' },
+      { key:'burger',     label:'漢堡',     emoji:'🍔' },
+      { key:'sushi',      label:'壽司',     emoji:'🍣' },
+      { key:'pasta',      label:'義大利麵', emoji:'🍝' },
+      { key:'ramen',      label:'拉麵',     emoji:'🍜' },
+      { key:'curry',      label:'咖哩',     emoji:'🍛' },
+      { key:'mexican',    label:'墨西哥',   emoji:'🌮' },
+      { key:'korean',     label:'韓國餐廳', emoji:'🍲' },
+      { key:'bakery',     label:'麵包店',   emoji:'🥐' },
+    ]},
+    { group:'🛍️ 購物', items:[
+      { key:'convenience', label:'便利商店', emoji:'🏪' },
+      { key:'supermarket', label:'超市',     emoji:'🛒' },
+      { key:'clothing',    label:'服飾店',   emoji:'👗' },
+      { key:'cosmetics',   label:'化妝品',   emoji:'💄' },
+      { key:'stationery',  label:'文具店',   emoji:'✏️' },
+      { key:'appliance',   label:'家電',     emoji:'🔌' },
+      { key:'tools',       label:'工具',     emoji:'🔧' },
+    ]},
+    { group:'🏨 生活服務', items:[
+      { key:'pharmacy',   label:'藥局',     emoji:'💊' },
+      { key:'postoffice', label:'郵局',     emoji:'📮' },
+      { key:'salon',      label:'美髮沙龍', emoji:'💇' },
+      { key:'laundry',    label:'洗衣店',   emoji:'🧺' },
+      { key:'hotel',      label:'飯店',     emoji:'🏨' },
+    ]},
+    { group:'🏞️ 自然景觀', items:[
+      { key:'zoo',      label:'動物園', emoji:'🦁' },
+      { key:'forest',   label:'森林',   emoji:'🌲' },
+      { key:'beach',    label:'海灘',   emoji:'🏖️' },
+      { key:'mountain', label:'山',     emoji:'⛰️' },
+      { key:'park',     label:'公園',   emoji:'🌳' },
+    ]},
+    { group:'🚉 交通', items:[
+      { key:'station', label:'車站',   emoji:'🚉' },
+      { key:'busstop', label:'公車站', emoji:'🚌' },
+      { key:'plane',   label:'飛機',   emoji:'🛩️' },
+      { key:'bridge',  label:'橋',     emoji:'🌉' },
+    ]},
+    { group:'🎭 文化娛樂', items:[
+      { key:'cinema',     label:'電影院',   emoji:'🎬' },
+      { key:'museum',     label:'美術館',   emoji:'🖼️' },
+      { key:'library',    label:'圖書館',   emoji:'📚' },
+      { key:'themepark',  label:'主題樂園', emoji:'🎢' },
+      { key:'stadium',    label:'體育場',   emoji:'🏟️' },
+      { key:'shrine',     label:'神社',     emoji:'⛩️' },
+      { key:'university', label:'大學',     emoji:'🎓' },
+    ]},
+    { group:'🎣 其他', items:[
+      { key:'lure', label:'擬餌', emoji:'🎣' },
+    ]},
+  ];
+
+  const SUBCAT_MAP = {};
+  SUBCAT_GROUPS.forEach(g => g.items.forEach(it => SUBCAT_MAP[it.key] = it));
+
+  // ---------- Google Sheet 後端設定 ----------
+  // 1. 依照教學建立 Google 試算表 + Apps Script，部署成「網頁應用程式」
+  // 2. 把部署後拿到的網址貼在下面的 API_URL
+  // 3. （選填）把試算表本身的網址貼在 SHEET_URL，畫面上就會出現「開啟 Google Sheet」按鈕
+  const API_URL = 'PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE';
+  const SHEET_URL = 'PASTE_YOUR_GOOGLE_SHEET_URL_HERE';
+
+  let data = [];
+  const backendHintEl = document.getElementById('backendHint');
+  const sheetLinkBtn = document.getElementById('sheetLinkBtn');
+
+  function isConfigured(){
+    return API_URL && !API_URL.startsWith('PASTE_YOUR');
+  }
+
+  if(isConfigured()){
+    backendHintEl.textContent = '🌐 已連接雲端試算表，所有裝置看到的都是同一份資料';
+  } else {
+    backendHintEl.innerHTML = '⚠️ 尚未設定 API_URL，請依照說明部署 Google Apps Script 後，把網址貼到 HTML 檔案裡的 <code>API_URL</code>';
+    backendHintEl.classList.add('error');
+  }
+
+  if(SHEET_URL && !SHEET_URL.startsWith('PASTE_YOUR')){
+    sheetLinkBtn.style.display = 'inline-flex';
+    sheetLinkBtn.addEventListener('click', () => window.open(SHEET_URL, '_blank'));
+  }
+
+  function buildQuery(params){
+    return Object.keys(params)
+      .map(k => encodeURIComponent(k) + '=' + encodeURIComponent(params[k] === undefined || params[k] === null ? '' : params[k]))
+      .join('&');
+  }
+
+  async function apiCall(params){
+    if(!isConfigured()) throw new Error('尚未設定 API_URL');
+    const url = `${API_URL}?${buildQuery(params)}`;
+    const res = await fetch(url);
+    if(!res.ok) throw new Error('連線失敗（' + res.status + '）');
+    const json = await res.json();
+    if(!json.success) throw new Error(json.error || '未知錯誤');
+    return json;
+  }
+
+  function normalizeEntry(raw){
+    return {
+      id: String(raw.id),
+      mainCat: MAIN_CATS[raw.mainCat] ? raw.mainCat : 'point',
+      subCat: raw.subCat && SUBCAT_MAP[raw.subCat] ? raw.subCat : null,
+      name: raw.name || '（未命名）',
+      lat: Number(raw.lat),
+      lng: Number(raw.lng),
+      notes: raw.notes || '',
+      countryName: raw.countryName || null,
+      countryCode: raw.countryCode || null,
+      region: raw.region || null,
+      timezone: raw.timezone || null,
+      geoFailed: false,
+      createdAt: Number(raw.createdAt) || Date.now()
+    };
+  }
+
+  // ---------- 狀態 ----------
+  let activeMainCat = 'all';
+  let activeSubCat = 'all';
+  let searchText = '';
+  let sortMode = 'new';
+
+  // ---------- 工具函式 ----------
+  function countryCodeToFlag(cc){
+    if(!cc || cc.length !== 2) return '🏳️';
+    return cc.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt(0)));
+  }
+
+  function parseCoord(text){
+    if(!text) return null;
+    const m = text.trim().match(/^(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)$/);
+    if(!m) return null;
+    const lat = parseFloat(m[1]);
+    const lng = parseFloat(m[2]);
+    if(isNaN(lat) || isNaN(lng)) return null;
+    if(lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+    return { lat, lng };
+  }
+
+  function formatCoord(lat, lng){
+    return lat.toFixed(5) + ', ' + lng.toFixed(5);
+  }
+
+  function copyToClipboard(text, onDone){
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(onDone).catch(() => fallbackCopy(text, onDone));
+    } else {
+      fallbackCopy(text, onDone);
+    }
+  }
+  function fallbackCopy(text, cb){
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try{ document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    cb();
+  }
+
+  // ---------- 地理資訊查詢 ----------
+  function lookupTimezoneSafe(lat, lng){
+    try{
+      if(typeof tzlookup === 'function') return tzlookup(lat, lng);
+    }catch(e){}
+    return null;
+  }
+
+  const geoInProgress = new Set();
+
+  async function lookupGeoInfo(entry){
+    if(geoInProgress.has(entry.id)) return;
+    geoInProgress.add(entry.id);
+    entry.timezone = lookupTimezoneSafe(entry.lat, entry.lng);
+    try{
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${entry.lat}&lon=${entry.lng}&zoom=10&accept-language=zh-TW`;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if(res.ok){
+        const json = await res.json();
+        const addr = json.address || {};
+        entry.countryName = addr.country || null;
+        entry.countryCode = addr.country_code || null;
+        entry.region = addr.city || addr.town || addr.county || addr.state || addr.village || null;
+        entry.geoFailed = false;
+      } else {
+        entry.geoFailed = true;
+      }
+    }catch(e){
+      entry.geoFailed = true;
+    }
+    renderGrid();
+
+    if(!entry.geoFailed && isConfigured()){
+      try{
+        await apiCall({
+          action: 'updateGeo',
+          id: entry.id,
+          countryName: entry.countryName || '',
+          countryCode: entry.countryCode || '',
+          region: entry.region || '',
+          timezone: entry.timezone || ''
+        });
+      }catch(e){ /* 寫回失敗不影響畫面顯示，下次重新整理時會再試一次 */ }
+    }
+    geoInProgress.delete(entry.id);
+  }
+
+  // 頁面載入後，依序（間隔 1.1 秒以上）幫還沒有國家/時區資訊的地點補查，
+  // 避免同時大量呼叫 Nominatim。查到的結果會寫回 Google Sheet，
+  // 之後所有裝置重新整理就都不用再查一次。
+  async function processMissingGeo(){
+    const targets = data.filter(d => !d.countryName && !d.timezone && !d.geoFailed);
+    for(const entry of targets){
+      await lookupGeoInfo(entry);
+      await new Promise(r => setTimeout(r, 1100));
+    }
+  }
+
+  // ---------- 分類選單渲染 ----------
+  function buildSubCatSelectHTML(includeAllOption){
+    let html = '';
+    if(includeAllOption) html += `<option value="all">📍 全部純點</option>`;
+    SUBCAT_GROUPS.forEach(g => {
+      html += `<optgroup label="${g.group}">`;
+      g.items.forEach(it => {
+        html += `<option value="${it.key}">${it.emoji} ${it.label}</option>`;
+      });
+      html += `</optgroup>`;
+    });
+    return html;
+  }
+
+  const filterSubSelect = document.getElementById('subCategorySelect');
+  filterSubSelect.innerHTML = buildSubCatSelectHTML(true);
+  const modalSubSelect = document.getElementById('modalSubCatSelect');
+  modalSubSelect.innerHTML = buildSubCatSelectHTML(false);
+
+  // ---------- 主分類 chips ----------
+  const mainFilterBar = document.getElementById('mainFilterBar');
+  function renderMainChips(){
+    const counts = { all: data.length, city:0, airport:0, point:0 };
+    data.forEach(d => { if(counts[d.mainCat] !== undefined) counts[d.mainCat]++; });
+
+    const defs = [
+      { key:'all', label:'全部', emoji:'🗂️' },
+      { key:'city', label:MAIN_CATS.city.label, emoji:MAIN_CATS.city.emoji },
+      { key:'airport', label:MAIN_CATS.airport.label, emoji:MAIN_CATS.airport.emoji },
+      { key:'point', label:MAIN_CATS.point.label, emoji:MAIN_CATS.point.emoji },
+    ];
+    mainFilterBar.innerHTML = defs.map(d => `
+      <button class="chip ${activeMainCat===d.key?'active':''}" data-cat="${d.key}" type="button">
+        <span>${d.emoji}</span><span>${d.label}</span><span class="count">${counts[d.key]}</span>
+      </button>
+    `).join('');
+
+    mainFilterBar.querySelectorAll('.chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        activeMainCat = btn.dataset.cat;
+        activeSubCat = 'all';
+        filterSubSelect.value = 'all';
+        document.getElementById('subFilterWrap').style.display = (activeMainCat === 'point') ? 'flex' : 'none';
+        renderMainChips();
+        renderGrid();
+      });
+    });
+  }
+
+  filterSubSelect.addEventListener('change', () => {
+    activeSubCat = filterSubSelect.value;
+    renderGrid();
+  });
+
+  // ---------- 卡片渲染 ----------
+  const grid = document.getElementById('grid');
+  const emptyState = document.getElementById('emptyState');
+  const totalCountEl = document.getElementById('totalCount');
+
+  function getFilteredSorted(){
+    let list = data.filter(d => {
+      if(activeMainCat !== 'all' && d.mainCat !== activeMainCat) return false;
+      if(activeMainCat === 'point' && activeSubCat !== 'all' && d.subCat !== activeSubCat) return false;
+      if(searchText){
+        const hay = [
+          d.name, formatCoord(d.lat, d.lng), d.notes, d.countryName, d.region,
+          d.subCat ? (SUBCAT_MAP[d.subCat] ? SUBCAT_MAP[d.subCat].label : '') : ''
+        ].filter(Boolean).join(' ').toLowerCase();
+        if(!hay.includes(searchText.toLowerCase())) return false;
+      }
+      return true;
+    });
+    if(sortMode === 'new') list.sort((a,b) => b.createdAt - a.createdAt);
+    else if(sortMode === 'old') list.sort((a,b) => a.createdAt - b.createdAt);
+    else if(sortMode === 'name') list.sort((a,b) => a.name.localeCompare(b.name, 'zh-Hant'));
+    return list;
+  }
+
+  function buildShareText(entry){
+    const catLabel = MAIN_CATS[entry.mainCat].label + (entry.subCat && SUBCAT_MAP[entry.subCat] ? ' - ' + SUBCAT_MAP[entry.subCat].label : '');
+    const lines = [
+      `${entry.name}（${catLabel}）`,
+      `座標：${formatCoord(entry.lat, entry.lng)}`,
+    ];
+    if(entry.countryName) lines.push(`地區：${countryCodeToFlag(entry.countryCode)} ${entry.countryName}${entry.region ? '・' + entry.region : ''}`);
+    if(entry.notes) lines.push(`備註：${entry.notes}`);
+    return lines.join('\n');
+  }
+
+  function renderGrid(){
+    const list = getFilteredSorted();
+    totalCountEl.textContent = data.length;
+
+    if(list.length === 0){
+      grid.innerHTML = '';
+      emptyState.style.display = 'block';
+      document.getElementById('emptyText').textContent = data.length === 0
+        ? '目前還沒有收藏的地點，點擊上方「➕ 新增地點」開始蒐集吧！'
+        : '沒有符合條件的地點，換個關鍵字或分類試試看吧！';
+    } else {
+      emptyState.style.display = 'none';
+      grid.innerHTML = list.map(entry => renderCardHTML(entry)).join('');
+    }
+
+    // 綁定事件
+    grid.querySelectorAll('[data-copy-coord]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = data.find(d => d.id === btn.dataset.copyCoord);
+        if(!entry) return;
+        const original = btn.textContent;
+        copyToClipboard(formatCoord(entry.lat, entry.lng), () => {
+          btn.textContent = '已複製 🌱';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1300);
+        });
+      });
+    });
+    grid.querySelectorAll('[data-share]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = data.find(d => d.id === btn.dataset.share);
+        if(!entry) return;
+        const original = btn.textContent;
+        copyToClipboard(buildShareText(entry), () => {
+          btn.textContent = '已複製 ✅';
+          btn.classList.add('copied');
+          setTimeout(() => { btn.textContent = original; btn.classList.remove('copied'); }, 1500);
+        });
+      });
+    });
+    grid.querySelectorAll('[data-delete]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.delete;
+        const entry = data.find(d => d.id === id);
+        if(!entry) return;
+        if(!confirm(`確定要刪除「${entry.name}」嗎？`)) return;
+        btn.disabled = true;
+        btn.textContent = '刪除中...';
+        try{
+          await apiCall({ action:'delete', id });
+          data = data.filter(d => d.id !== id);
+          renderMainChips();
+          renderGrid();
+        }catch(e){
+          alert('刪除失敗：' + e.message);
+          btn.disabled = false;
+          btn.textContent = '🗑️ 刪除';
+        }
+      });
+    });
+    grid.querySelectorAll('[data-retry]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = data.find(d => d.id === btn.dataset.retry);
+        if(!entry) return;
+        btn.textContent = '查詢中...';
+        lookupGeoInfo(entry);
+      });
+    });
+
+    updateAllClocks();
+  }
+
+  function renderCardHTML(entry){
+    const cat = MAIN_CATS[entry.mainCat];
+    const sub = entry.subCat ? SUBCAT_MAP[entry.subCat] : null;
+
+    let geoRow;
+    if(entry.geoFailed){
+      geoRow = `<div class="info-row geo-pending">🌐 地區查詢失敗
+        <button class="retry-btn" data-retry="${entry.id}" type="button">重新查詢</button>
+      </div>`;
+    } else if(!entry.countryName && !entry.timezone){
+      geoRow = `<div class="info-row geo-pending">🌐 查詢中...</div>`;
+    } else {
+      const flag = countryCodeToFlag(entry.countryCode);
+      const place = entry.countryName ? `${flag} ${entry.countryName}${entry.region ? '・' + entry.region : ''}` : '🌐 地區未知';
+      geoRow = `<div class="info-row" data-tz="${entry.timezone || ''}">
+        <span>${place}</span>
+        <span class="time-val" data-clock="${entry.id}">${entry.timezone ? '--:--:--' : ''}</span>
+      </div>`;
+    }
+
+    return `
+      <div class="card" data-card-for="${entry.id}">
+        <div class="card-top">
+          <div class="card-name">${entry.name}</div>
+          <span class="cat-badge ${entry.mainCat}">${cat.emoji} ${cat.label}</span>
+        </div>
+        ${sub ? `<div class="sub-tag">${sub.emoji} ${sub.label}</div>` : ''}
+        <div class="coord-box">
+          <code>${formatCoord(entry.lat, entry.lng)}</code>
+          <button class="copy-btn" data-copy-coord="${entry.id}" type="button">複製座標</button>
+        </div>
+        ${geoRow}
+        ${entry.notes ? `<div class="note">💬 ${escapeHtml(entry.notes)}</div>` : ''}
+        <div class="card-actions">
+          <button class="share-btn" data-share="${entry.id}" type="button">📤 複製資訊</button>
+          <button class="delete-btn" data-delete="${entry.id}" type="button">🗑️ 刪除</button>
+        </div>
+      </div>
+    `;
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+  }
+
+  function updateAllClocks(){
+    document.querySelectorAll('[data-clock]').forEach(el => {
+      const row = el.closest('.info-row');
+      const tz = row ? row.dataset.tz : '';
+      if(!tz) return;
+      try{
+        const timeStr = new Intl.DateTimeFormat('zh-TW', {
+          timeZone: tz, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+        }).format(new Date());
+        el.textContent = '🕒 ' + timeStr;
+      }catch(e){
+        el.textContent = '';
+      }
+    });
+  }
+  setInterval(updateAllClocks, 1000);
+
+  // ---------- 搜尋 / 排序 ----------
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    searchText = e.target.value;
+    renderGrid();
+  });
+  document.getElementById('sortSelect').addEventListener('change', (e) => {
+    sortMode = e.target.value;
+    renderGrid();
+  });
+
+  // ---------- Modal ----------
+  const modalOverlay = document.getElementById('modalOverlay');
+  const mainCatSelect = document.getElementById('mainCatSelect');
+  const subCatFieldWrap = document.getElementById('subCatFieldWrap');
+  const nameInput = document.getElementById('nameInput');
+  const coordInput = document.getElementById('coordInput');
+  const notesInput = document.getElementById('notesInput');
+  const modalError = document.getElementById('modalError');
+
+  function openModal(){
+    mainCatSelect.value = 'city';
+    subCatFieldWrap.style.display = 'none';
+    modalSubSelect.value = SUBCAT_GROUPS[0].items[0].key;
+    nameInput.value = '';
+    coordInput.value = '';
+    notesInput.value = '';
+    modalError.textContent = '';
+    modalOverlay.style.display = 'flex';
+    setTimeout(() => nameInput.focus(), 50);
+  }
+  function closeModal(){ modalOverlay.style.display = 'none'; }
+
+  document.getElementById('addBtn').addEventListener('click', openModal);
+  document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
+
+  mainCatSelect.addEventListener('change', () => {
+    subCatFieldWrap.style.display = (mainCatSelect.value === 'point') ? 'block' : 'none';
+  });
+
+  document.getElementById('modalSaveBtn').addEventListener('click', async () => {
+    const name = nameInput.value.trim();
+    const coord = parseCoord(coordInput.value);
+    const mainCat = mainCatSelect.value;
+    const subCat = mainCat === 'point' ? modalSubSelect.value : null;
+    const notes = notesInput.value.trim();
+
+    if(!name){ modalError.textContent = '請輸入地點名稱喔！'; return; }
+    if(!coord){ modalError.textContent = '座標格式不正確，請用「緯度, 經度」，例如 35.6586, 139.7454'; return; }
+    if(!isConfigured()){ modalError.textContent = '尚未設定 API_URL，請先完成 Google Sheet 後端設定'; return; }
+
+    const saveBtn = document.getElementById('modalSaveBtn');
+    saveBtn.disabled = true;
+    saveBtn.textContent = '儲存中...';
+    modalError.textContent = '';
+
+    try{
+      const res = await apiCall({
+        action: 'add',
+        mainCat, subCat: subCat || '',
+        name,
+        lat: coord.lat, lng: coord.lng,
+        notes
+      });
+      const entry = normalizeEntry(res.entry);
+      data.push(entry);
+      renderMainChips();
+      renderGrid();
+      closeModal();
+      lookupGeoInfo(entry);
+    }catch(e){
+      modalError.textContent = '儲存失敗：' + e.message;
+    }finally{
+      saveBtn.disabled = false;
+      saveBtn.textContent = '儲存';
+    }
+  });
+
+  // ---------- 載入 / 重新整理 ----------
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  async function loadFields(showLoadingState){
+    if(!isConfigured()){
+      renderMainChips();
+      renderGrid();
+      return;
+    }
+    if(showLoadingState){
+      refreshBtn.disabled = true;
+      refreshBtn.textContent = '讀取中...';
+    }
+    try{
+      const res = await apiCall({ action: 'list' });
+      data = (res.entries || []).map(normalizeEntry);
+      renderMainChips();
+      renderGrid();
+      processMissingGeo();
+    }catch(e){
+      backendHintEl.textContent = '⚠️ 讀取失敗：' + e.message;
+      backendHintEl.classList.add('error');
+    }finally{
+      if(showLoadingState){
+        refreshBtn.disabled = false;
+        refreshBtn.textContent = '🔄 重新整理';
+      }
+    }
+  }
+
+  refreshBtn.addEventListener('click', () => loadFields(true));
+
+  // 每 30 秒自動跟 Google Sheet 同步一次，讓多裝置盡量保持一致
+  if(isConfigured()){
+    setInterval(() => loadFields(false), 30000);
+  }
+
+  // ---------- 初始化 ----------
+  loadFields(false);
+
+})();
+</script>
+</body>
+</html>
