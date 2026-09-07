@@ -584,6 +584,8 @@
     <button class="filter-tab active" data-role="filter" data-category="all">全部</button>
     <button class="filter-tab" data-role="filter" data-category="沐田">沐田</button>
     <button class="filter-tab" data-role="filter" data-category="達醬">達醬</button>
+    <button class="filter-tab" data-role="filter" data-category="柴">柴</button>
+    <button class="filter-tab" data-role="filter" data-category="暫存">暫存</button>
     <button class="filter-tab" data-role="filter" data-category="其他">其他</button>
   </div>
 
@@ -629,7 +631,7 @@ const PRESETS = [
   { label:'6 小時', minutes: 6*60 },
   { label:'3 小時', minutes: 3*60 }
 ];
-const CATEGORIES = ['沐田', '達醬', '其他'];
+const CATEGORIES = ['沐田', '達醬', '柴', '暫存', '其他'];
 let apiUrl = DEFAULT_API_URL;
 let fields = [];
 let initialLoading = true;
