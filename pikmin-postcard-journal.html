@@ -636,6 +636,7 @@
             <div class="tag-row">
               <span class="badge ${post.cat}">${CATS[post.cat] ? CATS[post.cat].icon : ''} ${CATS[post.cat] ? CATS[post.cat].label : post.cat}</span>
               ${post.country ? `<span class="country-tag">📍 ${escapeHtml(post.country)}</span>` : ''}
+              ${post.timezone ? `<span class="country-tag">🕐 <span class="local-time" data-tz="${escapeHtml(post.timezone)}">--:--</span></span>` : ''}
             </div>
             <div class="coord-box">
               <code>${escapeHtml(post.coords)}</code>
@@ -656,7 +657,23 @@
           </div>
         </div>`;
       }).join('');
+      updateLocalTimes();
     }
+
+    function updateLocalTimes(){
+      document.querySelectorAll('.local-time[data-tz]').forEach(el => {
+        const tz = el.dataset.tz;
+        try{
+          const text = new Date().toLocaleString('zh-TW', {
+            timeZone: tz, month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit', hour12:false
+          });
+          el.textContent = text;
+        }catch(e){
+          el.textContent = '--:--';
+        }
+      });
+    }
+    setInterval(updateLocalTimes, 30000);
 
     grid.addEventListener('click', (e) => {
       const card = e.target.closest('.card');
@@ -770,6 +787,7 @@
     let cropDisplayW = 0, cropDisplayH = 0, cropNaturalW = 0, cropNaturalH = 0;
     let cropHandlersBound = false;
     let editingPostId = null;
+    let pendingTimezone = null;
 
     function openModal(existingPost){
       pendingImg = null;
@@ -777,6 +795,7 @@
       rawImageDataUrl = null;
       cropHandlersBound = false;
       editingPostId = existingPost ? existingPost.id : null;
+      pendingTimezone = existingPost ? (existingPost.timezone || null) : null;
       const existingImageSrc = existingPost ? (existingPost.imageUrl || existingPost.img || '') : '';
 
       modalRoot.innerHTML = `
@@ -817,7 +836,8 @@
           <div class="field">
             <label>座標</label>
             <input type="text" id="coordsInput" placeholder="例如：23.5563, 121.0106" value="${escapeHtml(existingPost ? existingPost.coords || '' : '')}">
-            <div class="hint">貼上遊戲內複製的座標即可；離開輸入框後會自動偵測國家</div>
+            <div class="hint">貼上遊戲內複製的座標即可；離開輸入框後會自動偵測國家與當地時區</div>
+            <div class="hint" id="tzHint">${existingPost && existingPost.timezone ? `🕐 目前時區：${escapeHtml(existingPost.timezone)}` : ''}</div>
           </div>
 
           <div class="field">
@@ -875,7 +895,10 @@
       });
 
       document.getElementById('imgInput').addEventListener('change', handleImgSelect);
-      document.getElementById('coordsInput').addEventListener('blur', detectCountry);
+      document.getElementById('coordsInput').addEventListener('blur', () => {
+        detectCountry();
+        detectTimezone();
+      });
       document.getElementById('submitBtn').addEventListener('click', submitPost);
       document.getElementById('cropApplyBtn').addEventListener('click', () => finalizeFromRect(cropRect));
       document.getElementById('cropSkipBtn').addEventListener('click', async () => {
@@ -1027,6 +1050,28 @@
         }
       }catch(e){ /* 偵測失敗就靜默，讓使用者自行輸入 */ }
       spinner.classList.remove('show');
+    }
+
+    async function detectTimezone(){
+      const coordsVal = document.getElementById('coordsInput').value.trim();
+      const tzHint = document.getElementById('tzHint');
+      const m = coordsVal.match(/(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)/);
+      if(!m) return;
+      const lat = m[1], lon = m[2];
+      if(tzHint) tzHint.textContent = '🕐 偵測時區中…';
+      try{
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`);
+        const data = await res.json();
+        if(data && data.timezone){
+          pendingTimezone = data.timezone;
+          if(tzHint) tzHint.textContent = `🕐 目前時區：${pendingTimezone}`;
+          saveDraft();
+        } else if(tzHint){
+          tzHint.textContent = '';
+        }
+      }catch(e){
+        if(tzHint) tzHint.textContent = '';
+      }
     }
 
     function handleImgSelect(e){
@@ -1231,8 +1276,8 @@
 
       if(API_URL){
         const payload = editingPostId
-          ? { action:'update', id:editingPostId, coords, country, cat:pendingCat, desc, idToken: currentUser ? currentUser.idToken : '' }
-          : { action:'add', coords, country, cat:pendingCat, desc };
+          ? { action:'update', id:editingPostId, coords, country, cat:pendingCat, desc, timezone: pendingTimezone || '', idToken: currentUser ? currentUser.idToken : '' }
+          : { action:'add', coords, country, cat:pendingCat, desc, timezone: pendingTimezone || '' };
         if(pendingImg) payload.image = pendingImg; // 編輯時沒換圖片就不帶這欄，後端會保留原圖
         try{
           const res = await fetch(API_URL, {
@@ -1255,13 +1300,13 @@
       } else if(editingPostId){
         const idx = posts.findIndex(p => p.id === editingPostId);
         if(idx > -1){
-          posts[idx] = { ...posts[idx], coords, country, cat:pendingCat, desc, img: pendingImg || posts[idx].img };
+          posts[idx] = { ...posts[idx], coords, country, cat:pendingCat, desc, timezone: pendingTimezone || posts[idx].timezone, img: pendingImg || posts[idx].img };
         }
         await savePostsLocal();
       } else {
         const post = {
           id: Date.now().toString(36) + Math.random().toString(36).slice(2,7),
-          img: pendingImg, coords, country, cat: pendingCat, desc, createdAt: Date.now(), obtained:false
+          img: pendingImg, coords, country, timezone: pendingTimezone || '', cat: pendingCat, desc, createdAt: Date.now(), obtained:false
         };
         posts.unshift(post);
         await savePostsLocal();
