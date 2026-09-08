@@ -41,6 +41,17 @@
     overflow-x:hidden;
   }
 
+  .home-link{
+    position:fixed; top:16px; left:16px; z-index:200;
+    display:inline-flex; align-items:center; gap:6px;
+    background:#3E9166; color:#fff; text-decoration:none;
+    font-family:'Zen Maru Gothic','Noto Sans TC',sans-serif; font-weight:700; font-size:13.5px;
+    padding:9px 16px; border-radius:999px; box-shadow:0 3px 0 #276148;
+    transition:transform .15s ease, box-shadow .15s ease;
+  }
+  .home-link:hover{ transform:translateY(-2px); }
+  .home-link:active{ transform:translateY(1px); box-shadow:0 1px 0 #276148; }
+
   .drift{
     position:fixed;
     pointer-events:none;
@@ -195,7 +206,6 @@
   }
   .btn-secondary:hover{ transform: translateY(-2px); }
   .btn-secondary:active{ transform: translateY(1px); box-shadow:0 1px 0 rgba(43,70,54,0.15);}
-  .btn-secondary.danger{ color:#C1454D; }
 
   .sort-select{
     font-family:"Zen Maru Gothic",sans-serif;
@@ -413,9 +423,9 @@
     word-break: break-word;
   }
 
-  .card-actions{ display:flex; gap:8px; }
+  .card-actions{ display:flex; flex-wrap:wrap; gap:8px; }
   .share-btn{
-    flex:1;
+    flex:1 1 100%;
     border:none;
     background: linear-gradient(135deg, var(--sky), var(--purple));
     color:#fff;
@@ -430,7 +440,22 @@
   .share-btn:hover{ filter:brightness(1.06); transform: translateY(-1px); }
   .share-btn:active{ transform: translateY(1px) scale(.98); }
   .share-btn.copied{ background: var(--leaf); }
+  .edit-btn{
+    flex:1;
+    border:none;
+    background: #FFF3CF;
+    color:#8A6D00;
+    font-weight:800;
+    font-size:12.5px;
+    padding: 9px 10px;
+    border-radius: 12px;
+    cursor:pointer;
+    transition: transform .15s ease, background .15s ease;
+  }
+  .edit-btn:hover{ background:#FFE9A8; transform: translateY(-1px); }
+  .edit-btn:active{ transform: translateY(1px) scale(.95); }
   .delete-btn{
+    flex:1;
     border:none;
     background: #FDEAEA;
     color:#C1454D;
@@ -546,6 +571,8 @@
 </head>
 <body>
 
+<a href="index.html" class="home-link">← 回首頁</a>
+
 <span class="drift d1">🧭</span>
 <span class="drift d2">🗺️</span>
 <span class="drift d3">✈️</span>
@@ -576,7 +603,6 @@
     <div class="toolbar-actions">
       <button id="addBtn" class="btn-primary">➕ 新增地點</button>
       <button id="refreshBtn" class="btn-secondary">🔄 重新整理</button>
-      <button id="sheetLinkBtn" class="btn-secondary" style="display:none;">📝 開啟 Google Sheet</button>
     </div>
   </div>
 
@@ -598,10 +624,10 @@
   </footer>
 </div>
 
-<!-- Add Modal -->
+<!-- Add / Edit Modal -->
 <div class="modal-overlay" id="modalOverlay" style="display:none;">
   <div class="modal-box">
-    <h3>➕ 新增地點</h3>
+    <h3 id="modalTitle">➕ 新增地點</h3>
 
     <label>主分類</label>
     <select id="mainCatSelect">
@@ -707,13 +733,10 @@
   // ---------- Google Sheet 後端設定 ----------
   // 1. 依照教學建立 Google 試算表 + Apps Script，部署成「網頁應用程式」
   // 2. 把部署後拿到的網址貼在下面的 API_URL
-  // 3. （選填）把試算表本身的網址貼在 SHEET_URL，畫面上就會出現「開啟 Google Sheet」按鈕
   const API_URL = 'https://script.google.com/macros/s/AKfycbwITld4Q5XqkOTwMsasmR9EY-twRnOpBtj20duLDbONijaNPk7VO7NXWWSAKYVcaEq2xw/exec';
-  const SHEET_URL = 'PASTE_YOUR_GOOGLE_SHEET_URL_HERE';
 
   let data = [];
   const backendHintEl = document.getElementById('backendHint');
-  const sheetLinkBtn = document.getElementById('sheetLinkBtn');
 
   function isConfigured(){
     return API_URL && !API_URL.startsWith('PASTE_YOUR');
@@ -724,11 +747,6 @@
   } else {
     backendHintEl.innerHTML = '⚠️ 尚未設定 API_URL，請依照說明部署 Google Apps Script 後，把網址貼到 HTML 檔案裡的 <code>API_URL</code>';
     backendHintEl.classList.add('error');
-  }
-
-  if(SHEET_URL && !SHEET_URL.startsWith('PASTE_YOUR')){
-    sheetLinkBtn.style.display = 'inline-flex';
-    sheetLinkBtn.addEventListener('click', () => window.open(SHEET_URL, '_blank'));
   }
 
   function buildQuery(params){
@@ -770,6 +788,7 @@
   let activeSubCat = 'all';
   let searchText = '';
   let sortMode = 'new';
+  let editingEntry = null;
 
   // ---------- 工具函式 ----------
   function countryCodeToFlag(cc){
@@ -998,6 +1017,13 @@
         });
       });
     });
+    grid.querySelectorAll('[data-edit]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const entry = data.find(d => d.id === btn.dataset.edit);
+        if(!entry) return;
+        openEditModal(entry);
+      });
+    });
     grid.querySelectorAll('[data-delete]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.delete;
@@ -1065,6 +1091,7 @@
         ${entry.notes ? `<div class="note">💬 ${escapeHtml(entry.notes)}</div>` : ''}
         <div class="card-actions">
           <button class="share-btn" data-share="${entry.id}" type="button">📤 複製資訊</button>
+          <button class="edit-btn" data-edit="${entry.id}" type="button">✏️ 編輯</button>
           <button class="delete-btn" data-delete="${entry.id}" type="button">🗑️ 刪除</button>
         </div>
       </div>
@@ -1104,6 +1131,7 @@
 
   // ---------- Modal ----------
   const modalOverlay = document.getElementById('modalOverlay');
+  const modalTitleEl = document.getElementById('modalTitle');
   const mainCatSelect = document.getElementById('mainCatSelect');
   const subCatFieldWrap = document.getElementById('subCatFieldWrap');
   const nameInput = document.getElementById('nameInput');
@@ -1111,7 +1139,9 @@
   const notesInput = document.getElementById('notesInput');
   const modalError = document.getElementById('modalError');
 
-  function openModal(){
+  function openAddModal(){
+    editingEntry = null;
+    modalTitleEl.textContent = '➕ 新增地點';
     mainCatSelect.value = 'city';
     subCatFieldWrap.style.display = 'none';
     modalSubSelect.value = SUBCAT_GROUPS[0].items[0].key;
@@ -1122,9 +1152,24 @@
     modalOverlay.style.display = 'flex';
     setTimeout(() => nameInput.focus(), 50);
   }
-  function closeModal(){ modalOverlay.style.display = 'none'; }
 
-  document.getElementById('addBtn').addEventListener('click', openModal);
+  function openEditModal(entry){
+    editingEntry = entry;
+    modalTitleEl.textContent = '✏️ 編輯地點';
+    mainCatSelect.value = entry.mainCat;
+    subCatFieldWrap.style.display = (entry.mainCat === 'point') ? 'block' : 'none';
+    modalSubSelect.value = entry.subCat || SUBCAT_GROUPS[0].items[0].key;
+    nameInput.value = entry.name;
+    coordInput.value = formatCoord(entry.lat, entry.lng);
+    notesInput.value = entry.notes || '';
+    modalError.textContent = '';
+    modalOverlay.style.display = 'flex';
+    setTimeout(() => nameInput.focus(), 50);
+  }
+
+  function closeModal(){ modalOverlay.style.display = 'none'; editingEntry = null; }
+
+  document.getElementById('addBtn').addEventListener('click', openAddModal);
   document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
   modalOverlay.addEventListener('click', (e) => { if(e.target === modalOverlay) closeModal(); });
 
@@ -1149,19 +1194,37 @@
     modalError.textContent = '';
 
     try{
-      const res = await apiCall({
-        action: 'add',
-        mainCat, subCat: subCat || '',
-        name,
-        lat: coord.lat, lng: coord.lng,
-        notes
-      });
-      const entry = normalizeEntry(res.entry);
-      data.push(entry);
-      renderMainChips();
-      renderGrid();
-      closeModal();
-      lookupGeoInfo(entry);
+      if(editingEntry){
+        const res = await apiCall({
+          action: 'update',
+          id: editingEntry.id,
+          mainCat, subCat: subCat || '',
+          name,
+          lat: coord.lat, lng: coord.lng,
+          notes
+        });
+        const updated = normalizeEntry(res.entry);
+        const idx = data.findIndex(d => d.id === updated.id);
+        if(idx !== -1) data[idx] = updated; else data.push(updated);
+        renderMainChips();
+        renderGrid();
+        closeModal();
+        if(!updated.countryName && !updated.timezone) lookupGeoInfo(updated);
+      } else {
+        const res = await apiCall({
+          action: 'add',
+          mainCat, subCat: subCat || '',
+          name,
+          lat: coord.lat, lng: coord.lng,
+          notes
+        });
+        const entry = normalizeEntry(res.entry);
+        data.push(entry);
+        renderMainChips();
+        renderGrid();
+        closeModal();
+        lookupGeoInfo(entry);
+      }
     }catch(e){
       modalError.textContent = '儲存失敗：' + e.message;
     }finally{
