@@ -395,8 +395,9 @@
   .info-row .time-val{
     margin-left:auto;
     font-family:"Baloo 2",monospace;
-    font-size:14.5px;
-    letter-spacing:0.3px;
+    font-size:13px;
+    letter-spacing:0.2px;
+    white-space:nowrap;
   }
   .retry-btn{
     border:none;
@@ -973,6 +974,9 @@
       `座標：${formatCoord(entry.lat, entry.lng)}`,
     ];
     if(entry.countryName) lines.push(`地區：${countryCodeToFlag(entry.countryCode)} ${entry.countryName}${entry.region ? '・' + entry.region : ''}`);
+    if(entry.timezone){
+      try{ lines.push(`當地時間：${formatLocalDateTime(entry.timezone, new Date())}`); }catch(e){}
+    }
     if(entry.notes) lines.push(`備註：${entry.notes}`);
     return lines.join('\n');
   }
@@ -1072,7 +1076,7 @@
       const place = entry.countryName ? `${flag} ${entry.countryName}${entry.region ? '・' + entry.region : ''}` : '🌐 地區未知';
       geoRow = `<div class="info-row" data-tz="${entry.timezone || ''}">
         <span>${place}</span>
-        <span class="time-val" data-clock="${entry.id}">${entry.timezone ? '--:--:--' : ''}</span>
+        <span class="time-val" data-clock="${entry.id}">${entry.timezone ? '--/-- (-) --:--:--' : ''}</span>
       </div>`;
     }
 
@@ -1102,16 +1106,28 @@
     return String(str).replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   }
 
+  function formatLocalDateTime(tz, now){
+    const dateParts = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: tz, month:'2-digit', day:'2-digit', weekday:'short'
+    }).formatToParts(now);
+    const get = (type) => (dateParts.find(p => p.type === type) || {}).value || '';
+    const month = get('month');
+    const day = get('day');
+    const weekday = get('weekday').replace('週', '');
+    const timeStr = new Intl.DateTimeFormat('zh-TW', {
+      timeZone: tz, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
+    }).format(now);
+    return `${month}/${day} (${weekday}) ${timeStr}`;
+  }
+
   function updateAllClocks(){
+    const now = new Date();
     document.querySelectorAll('[data-clock]').forEach(el => {
       const row = el.closest('.info-row');
       const tz = row ? row.dataset.tz : '';
       if(!tz) return;
       try{
-        const timeStr = new Intl.DateTimeFormat('zh-TW', {
-          timeZone: tz, hour:'2-digit', minute:'2-digit', second:'2-digit', hour12:false
-        }).format(new Date());
-        el.textContent = '🕒 ' + timeStr;
+        el.textContent = '🕒 ' + formatLocalDateTime(tz, now);
       }catch(e){
         el.textContent = '';
       }
