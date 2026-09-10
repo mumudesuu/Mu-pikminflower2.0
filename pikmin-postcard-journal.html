@@ -127,6 +127,7 @@
   .chip.active[data-obt="all"]{ background:var(--ink); color:#fff; box-shadow:0 3px 0 rgba(43,70,54,.35); }
   .chip.active[data-obt="got"]{ background:var(--leaf); color:#fff; box-shadow:0 3px 0 var(--leaf-deep); }
   .chip.active[data-obt="not"]{ background:var(--mush); color:#fff; box-shadow:0 3px 0 var(--mush-deep); }
+  .chip.active[data-obt="expired"]{ background:var(--purple); color:#fff; box-shadow:0 3px 0 var(--purple-deep); }
 
   .add-btn{
     border:none; background:linear-gradient(135deg, var(--leaf), var(--leaf-deep)); color:#fff;
@@ -366,6 +367,7 @@
         <button class="chip active" data-obt="all">全部狀態</button>
         <button class="chip" data-obt="got">✅ 已取得</button>
         <button class="chip" data-obt="not">⭕ 未取得</button>
+        <button class="chip" data-obt="expired">已絕版</button>
       </div>
       <button class="add-btn" id="openAdd" type="button">＋ 新增地點</button>
     </div>
@@ -609,6 +611,7 @@
       if(activeCat !== 'all' && post.cat !== activeCat) return false;
       if(activeObtained === 'got' && !post.obtained) return false;
       if(activeObtained === 'not' && post.obtained) return false;
+      if(activeObtained === 'expired' && !post.expired) return false;
       if(searchTerm){
         const hay = ((post.desc||'') + ' ' + (post.coords||'') + ' ' + (post.country||'')).toLowerCase();
         if(!hay.includes(searchTerm.toLowerCase())) return false;
