@@ -142,10 +142,20 @@
     background:var(--white); border-radius:22px; overflow:hidden; box-shadow:var(--card-shadow);
     border:3px solid rgba(39,97,72,.06); display:flex; flex-direction:column;
     opacity:0; transform:translateY(14px) scale(.97); animation:card-in .45s ease forwards;
-    transition:transform .2s ease, box-shadow .2s ease;
+    transition:transform .2s ease, box-shadow .2s ease, filter .2s ease, opacity .2s ease;
   }
   .card:hover{ transform:translateY(-4px); box-shadow:0 10px 0 rgba(39,97,72,.14); }
   @keyframes card-in{ to{ opacity:1; transform:translateY(0) scale(1); } }
+  .card.status-got{
+    border-color: var(--leaf);
+    background: linear-gradient(180deg, #EFFAF3 0%, var(--white) 55%);
+  }
+  .card.status-expired{
+    border-color: var(--mush);
+    filter: grayscale(45%);
+    opacity: .78 !important; /* card-in 進場動畫的 forwards 效果會蓋掉一般的 opacity，這裡要蓋回來 */
+  }
+  .card.status-expired:hover{ filter: grayscale(15%); opacity: 1 !important; }
 
   .thumb{ width:100%; aspect-ratio:4/3; object-fit:cover; display:block; background:var(--cream-deep); }
   .thumb-empty{
@@ -627,10 +637,11 @@
       grid.innerHTML = filtered.map((post, i) => {
         const isGot = !!post.obtained;
         const isExpired = !!post.expired;
+        const statusClass = isExpired ? 'status-expired' : (isGot ? 'status-got' : 'status-pending');
         const src = post.imageUrl || post.img;
         const img = src ? `<img class="thumb" src="${src}" alt="明信片">` : `<div class="thumb-empty">🌱 未提供圖片</div>`;
         return `
-        <div class="card" data-id="${post.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
+        <div class="card ${statusClass}" data-id="${post.id}" style="animation-delay:${Math.min(i,8)*0.04}s">
           ${img}
           <div class="card-body">
             <div class="tag-row">
