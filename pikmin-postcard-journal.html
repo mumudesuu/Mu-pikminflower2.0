@@ -788,6 +788,7 @@
     let cropHandlersBound = false;
     let editingPostId = null;
     let pendingTimezone = null;
+    let lastTzCoords = null;
 
     function openModal(existingPost){
       pendingImg = null;
@@ -796,6 +797,7 @@
       cropHandlersBound = false;
       editingPostId = existingPost ? existingPost.id : null;
       pendingTimezone = existingPost ? (existingPost.timezone || null) : null;
+      lastTzCoords = existingPost ? (existingPost.coords || null) : null; // 編輯時座標沒改就不重查時區
       const existingImageSrc = existingPost ? (existingPost.imageUrl || existingPost.img || '') : '';
 
       modalRoot.innerHTML = `
@@ -1055,9 +1057,11 @@
     async function detectTimezone(){
       const coordsVal = document.getElementById('coordsInput').value.trim();
       const tzHint = document.getElementById('tzHint');
+      if(!coordsVal || coordsVal === lastTzCoords) return; // 座標沒變就不重複打 API
       const m = coordsVal.match(/(-?\d{1,3}(?:\.\d+)?)[,\s]+(-?\d{1,3}(?:\.\d+)?)/);
       if(!m) return;
       const lat = m[1], lon = m[2];
+      lastTzCoords = coordsVal;
       if(tzHint) tzHint.textContent = '🕐 偵測時區中…';
       try{
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true&timezone=auto`);
@@ -1287,7 +1291,18 @@
           });
           const data = await res.json();
           if(!data.ok) throw new Error(data.error || 'failed');
-          await loadPosts();
+          if(editingPostId){
+            const idx = posts.findIndex(p => p.id === editingPostId);
+            if(idx > -1){
+              posts[idx] = { ...posts[idx], coords, country, cat:pendingCat, desc, timezone: pendingTimezone || posts[idx].timezone };
+              if(data.imageUrl) posts[idx].imageUrl = data.imageUrl;
+            }
+          } else {
+            posts.unshift({
+              id: data.id, coords, country, cat:pendingCat, desc, timezone: pendingTimezone || '',
+              imageUrl: data.imageUrl || '', obtained:false, expired:false, createdAt: new Date().toISOString()
+            });
+          }
         }catch(e){
           if(editingPostId && e && (e.message === 'invalid-token' || e.message === 'no-token')) signOutStale();
           errEl.textContent = editingPostId
