@@ -325,6 +325,19 @@
     font-weight:700;
   }
 
+  .localtime-row{
+    font-size:12px;
+    color: #3A7A93;
+    background: #EAF6FA;
+    border-radius: 10px;
+    padding: 5px 12px;
+    margin-bottom: 8px;
+    font-weight:700;
+  }
+  .localtime-row:empty{
+    display:none;
+  }
+
   .flag-row{
     display:flex;
     gap:14px;
@@ -826,6 +839,31 @@
     "比利時": { dot: "#B080E0", bg: "#8E5BC7" },
   };
 
+  // 地區對應的 IANA 時區名稱，用來換算「當地現在幾點」。
+  // 這三個地區整個國家都在同一個時區內，所以用地區對應就等於用座標精算，
+  // 而且不用接外部 API、不用金鑰、不會因為第三方服務掛掉而壞掉。
+  // 之後如果新增的地區橫跨兩個時區，再改成真正的經緯度查詢即可。
+  const REGION_TIMEZONES = {
+    "印度": "Asia/Kolkata",
+    "克羅埃西亞": "Europe/Zagreb",
+    "比利時": "Europe/Brussels",
+  };
+
+  function formatLocalTime(region){
+    const tz = REGION_TIMEZONES[region];
+    if(!tz) return null;
+    try{
+      const fmt = new Intl.DateTimeFormat('zh-TW', {
+        timeZone: tz,
+        month: '2-digit', day: '2-digit', weekday: 'short',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+      return fmt.format(new Date());
+    } catch(err){
+      return null;
+    }
+  }
+
   // 倒數快捷選項（分鐘）：可依實際冷卻時間調整
   const COOLDOWN_PRESETS = [
     { label: "23hr", minutes: 23 * 60 },
@@ -874,7 +912,9 @@
   const STANDARD_CYCLE_MS = 23 * 60 * 60 * 1000; // 標準完整開花週期，自訂倒數用這個反推起始時間
 
   let flowers = [];
-  let isAdmin = false;
+  let isAdmin = false;      // true = 高階管理員(owner) 或 已認證皮友(member)，兩者都能操作倒數/花種/花苗花苞/隱藏
+  let isOwner = false;      // true = 只有高階管理員(站長)，用來限制「查看＋複製路徑網址」這個獨立區塊
+  let userRole = null;      // 'owner' | 'member' | null
   let idToken = null;      // 登入成功後暫存的 Google ID Token（僅存於記憶體，重新整理就會清除）
   let adminEmail = null;
   let adminName = null;
@@ -1169,8 +1209,9 @@
 
   function refreshAdminPill(){
     if(isAdmin){
+      const roleLabel = isOwner ? '👑 站長' : '🌟 已認證';
       adminPill.classList.add('is-admin');
-      adminStatusText.textContent = `🔓 管理員模式（${adminName || adminEmail || ''}）`;
+      adminStatusText.textContent = `🔓 ${roleLabel}（${adminName || adminEmail || ''}）`;
       googleBtnContainer.style.display = 'none';
       logoutBtn.style.display = 'inline-flex';
     } else {
@@ -1203,6 +1244,8 @@
       const email = payload && payload.email ? payload.email.toLowerCase() : null;
       if(email && LOCAL_DEMO_ADMIN_EMAIL && email === LOCAL_DEMO_ADMIN_EMAIL.toLowerCase()){
         isAdmin = true;
+        isOwner = true; // 本地示範模式一律視為最高權限，方便預覽完整畫面
+        userRole = 'owner';
         idToken = token;
         adminEmail = email;
         adminName = (payload && payload.name) ? payload.name : email;
@@ -1219,6 +1262,8 @@
       const data = await res.json();
       if(data.ok){
         isAdmin = true;
+        userRole = data.role || 'member';
+        isOwner = (userRole === 'owner');
         idToken = token;
         adminEmail = data.email;
         adminName = data.name || data.email;
@@ -1344,6 +1389,8 @@
 
   logoutBtn.addEventListener('click', async () => {
     isAdmin = false;
+    isOwner = false;
+    userRole = null;
     idToken = null;
     adminEmail = null;
     adminName = null;
@@ -1460,7 +1507,7 @@
         </div>
       ` : '';
 
-      const pathHtml = isAdmin ? `
+      const pathHtml = isOwner ? `
         <div class="coord-box path-box">
           <span class="path-label">🔒 路徑</span>
           <code>${f.pathUrl ? escapeHtml(f.pathUrl) : '（試算表尚未填寫）'}</code>
@@ -1483,6 +1530,7 @@
           <span class="status-text">—</span>
           <span class="countdown-time"></span>
         </div>
+        <div class="localtime-row" data-localtime-for="${f.id}"></div>
         ${seedlingHtml}
         ${flowerTypeHtml}
         ${flagRowHtml}
@@ -1570,6 +1618,12 @@
     flowers.forEach(f => {
       const row = document.querySelector(`[data-status-for="${f.id}"]`);
       const card = document.querySelector(`[data-card-for="${f.id}"]`);
+      const localTimeRow = document.querySelector(`[data-localtime-for="${f.id}"]`);
+
+      if(localTimeRow){
+        const localTimeStr = formatLocalTime(f.region);
+        localTimeRow.textContent = localTimeStr ? `🕐 當地時間：${localTimeStr}` : '';
+      }
 
       const phase = getFlowerPhase(f);
       const prevPhase = lastPhaseById[f.id];
