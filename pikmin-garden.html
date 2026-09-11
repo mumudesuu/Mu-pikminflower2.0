@@ -357,6 +357,19 @@
   }
   .coords-copy-btn:hover{background:var(--sky-deep);}
   .coords-copy-btn.copied{background:var(--leaf);}
+
+  .local-time-row{
+    display:flex; align-items:center; gap:6px;
+    font-size:12px; color:#7E9484;
+    padding:0 2px;
+  }
+  .local-time-icon{font-size:13px;}
+  .local-time-text{font-family:'Baloo 2',sans-serif; font-weight:700; color:var(--ink); font-size:13px;}
+  .local-time-utc{
+    font-family:'Baloo 2',sans-serif; font-weight:700; color:#9AAB9F; font-size:10.5px;
+    background:var(--cream); padding:2px 7px; border-radius:10px;
+  }
+
   .add-bar-coords{
     background:var(--white);
     border:2px solid var(--cream-deep);
@@ -1041,6 +1054,43 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
+function parseCoords(str){
+  if(!str) return null;
+  const matches = str.match(/-?\d+(\.\d+)?/g);
+  if(!matches || matches.length < 2) return null;
+  const lat = parseFloat(matches[0]);
+  const lng = parseFloat(matches[1]);
+  if(isNaN(lat) || isNaN(lng)) return null;
+  if(Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+function utcOffsetFromLng(lng){
+  let offset = Math.round(lng / 15);
+  if(offset > 14) offset = 14;
+  if(offset < -12) offset = -12;
+  return offset;
+}
+function formatLocalTime(lng){
+  const offset = utcOffsetFromLng(lng);
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const local = new Date(utcMs + offset * 3600000);
+  const hh = String(local.getHours()).padStart(2,'0');
+  const mm = String(local.getMinutes()).padStart(2,'0');
+  return `${local.getMonth()+1}/${local.getDate()} ${hh}:${mm}`;
+}
+function localTimeBlock(f){
+  const c = parseCoords(f.coords);
+  if(!c) return '';
+  const offset = utcOffsetFromLng(c.lng);
+  return `
+    <div class="local-time-row" data-role="local-time-row" data-lng="${c.lng}">
+      <span class="local-time-icon">🕐</span>
+      <span class="local-time-text" data-role="local-time">${formatLocalTime(c.lng)}</span>
+      <span class="local-time-utc">約 UTC${offset>=0?'+':''}${offset}</span>
+    </div>`;
+}
+
 function cardTemplate(f){
   const hasTimer = !!f.timerEnd;
   const remaining = hasTimer ? f.timerEnd - Date.now() : 0;
@@ -1102,6 +1152,7 @@ function cardTemplate(f){
       <input class="coords-input" data-role="coords" placeholder="選填" value="${escapeHtml(f.coords || '')}" maxlength="60">
       <button class="coords-copy-btn" data-role="copy-coords" type="button" title="複製座標">📋</button>
     </div>
+    ${localTimeBlock(f)}
 
     <div class="timer-box">
       ${hasTimer ? `
@@ -1327,6 +1378,12 @@ function startTicker(){
         const hRemaining = f.hiddenTimerEnd - Date.now();
         const hDisp = card.querySelector('[data-role="hidden-countdown"]');
         if(hDisp) hDisp.textContent = formatCountdown(hRemaining);
+      }
+      const timeRow = card.querySelector('[data-role="local-time-row"]');
+      if(timeRow){
+        const lng = parseFloat(timeRow.dataset.lng);
+        const timeDisp = card.querySelector('[data-role="local-time"]');
+        if(timeDisp) timeDisp.textContent = formatLocalTime(lng);
       }
     });
   }, 1000);
