@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://unpkg.com/tz-lookup@6.1.25/tz.js" async defer></script>
 <style>
   :root{
     --cream:#FFF6E8;
@@ -839,19 +840,51 @@
     "比利時": { dot: "#B080E0", bg: "#8E5BC7" },
   };
 
-  // 地區對應的 IANA 時區名稱，用來換算「當地現在幾點」。
-  // 這三個地區整個國家都在同一個時區內，所以用地區對應就等於用座標精算，
-  // 而且不用接外部 API、不用金鑰、不會因為第三方服務掛掉而壞掉。
-  // 之後如果新增的地區橫跨兩個時區，再改成真正的經緯度查詢即可。
+  // 地區對應的 IANA 時區名稱——當座標查詢失敗、或 tz-lookup 函式庫還沒載入好時
+  // 的備援表。正常情況下應該用不到，因為會優先直接用座標查時區。
+  // 之後如果新增的地區座標查詢剛好失敗，再考慮補一行進來當備援即可。
   const REGION_TIMEZONES = {
     "印度": "Asia/Kolkata",
     "克羅埃西亞": "Europe/Zagreb",
     "比利時": "Europe/Brussels",
   };
 
-  function formatLocalTime(region){
-    const tz = REGION_TIMEZONES[region];
+  function parseCoord(coordStr){
+    if(!coordStr) return null;
+    const parts = String(coordStr).split(',').map(s => parseFloat(s.trim()));
+    if(parts.length !== 2 || Number.isNaN(parts[0]) || Number.isNaN(parts[1])) return null;
+    return { lat: parts[0], lng: parts[1] };
+  }
+
+  function resolveTimezone(region, coordStr){
+    let tz = null;
+
+    // 優先直接用座標查時區（tz-lookup 是離線的時區邊界資料庫，
+    // 不用打 API、不用金鑰，只要函式庫載入成功就能用）。
+    // 這樣以後新增任何地區的花田，都不用再手動維護對照表。
+    if(typeof window.tzlookup === 'function'){
+      const coord = parseCoord(coordStr);
+      if(coord){
+        try{
+          tz = window.tzlookup(coord.lat, coord.lng);
+        } catch(err){
+          tz = null;
+        }
+      }
+    }
+
+    // 備援：函式庫還沒載入好，或座標查詢失敗時，退回用地區對照表
+    if(!tz){
+      tz = REGION_TIMEZONES[region] || null;
+    }
+
+    return tz;
+  }
+
+  function formatLocalTime(region, coordStr){
+    const tz = resolveTimezone(region, coordStr);
     if(!tz) return null;
+
     try{
       const fmt = new Intl.DateTimeFormat('zh-TW', {
         timeZone: tz,
@@ -861,6 +894,24 @@
       return fmt.format(new Date());
     } catch(err){
       return null;
+    }
+  }
+
+  // 給分享文字用的簡短版本（不含星期幾），格式類似 "9/10 13:31"
+  function formatLocalTimeShort(region, coordStr){
+    const tz = resolveTimezone(region, coordStr);
+    if(!tz) return null;
+
+    try{
+      const fmt = new Intl.DateTimeFormat('zh-TW', {
+        timeZone: tz,
+        month: 'numeric', day: 'numeric',
+        hour: '2-digit', minute: '2-digit', hour12: false
+      });
+      return fmt.format(new Date());
+    } catch(err){
+      return null;
+
     }
   }
 
@@ -1621,7 +1672,7 @@
       const localTimeRow = document.querySelector(`[data-localtime-for="${f.id}"]`);
 
       if(localTimeRow){
-        const localTimeStr = formatLocalTime(f.region);
+        const localTimeStr = formatLocalTime(f.region, f.coord);
         localTimeRow.textContent = localTimeStr ? `🕐 當地時間：${localTimeStr}` : '';
       }
 
@@ -1740,8 +1791,15 @@
       remainText = '空閒待命中，隨時可前往';
     }
 
+    const localTimeStr = formatLocalTimeShort(f.region, f.coord);
+
     const lines = [
       `${f.name} in${f.region}`,
+    ];
+    if(localTimeStr){
+      lines.push(`當地時間🕰️${localTimeStr}`);
+    }
+    lines.push(
       '',
       `花種：${f.flowerType ? f.flowerType : '尚未設定'}`,
       `苗數：${(f.seedlingCount !== null && f.seedlingCount !== undefined && f.seedlingCount !== '') ? f.seedlingCount + '株' : '未紀錄'}`,
@@ -1749,7 +1807,7 @@
       `剩餘：${remainText}`,
       '備註：',
       ...f.notes.map(n => `💬 ${n}`),
-    ];
+    );
 
     // 路徑是管理員專用資料：訪客拿到的 f 物件本來就沒有 pathUrl，
     // 這裡再加一層 isAdmin 判斷做雙重保險，訪客複製時絕對不會出現這一行。
