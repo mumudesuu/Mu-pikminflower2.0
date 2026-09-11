@@ -326,6 +326,53 @@
   .species-input::placeholder{color:#A9BBAE; font-weight:600;}
   .species-input:focus{border-color:var(--purple);}
 
+  .coords-row{display:flex; align-items:center; gap:8px;}
+  .coords-label{
+    font-family:'Baloo 2',sans-serif; font-weight:700; font-size:13px;
+    color:var(--ink); flex-shrink:0; white-space:nowrap;
+  }
+  .coords-input{
+    width:100%;
+    background:var(--cream);
+    border:2px solid var(--cream-deep);
+    border-radius:11px;
+    padding:9px 12px;
+    font-family:'Baloo 2','Zen Maru Gothic',monospace;
+    font-size:12.5px;
+    font-weight:700;
+    color:var(--ink);
+    outline:none;
+  }
+  .coords-input::placeholder{color:#A9BBAE; font-weight:600; font-family:'Zen Maru Gothic',sans-serif;}
+  .coords-input:focus{border-color:var(--sky);}
+  .coords-copy-btn{
+    background:var(--sky);
+    color:var(--white);
+    border:none;
+    border-radius:9px;
+    width:34px; height:34px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:14px;
+    cursor:pointer;
+  }
+  .coords-copy-btn:hover{background:var(--sky-deep);}
+  .coords-copy-btn.copied{background:var(--leaf);}
+  .add-bar-coords{
+    background:var(--white);
+    border:2px solid var(--cream-deep);
+    color:var(--ink);
+    border-radius:14px;
+    padding:13px 16px;
+    font-family:'Baloo 2','Zen Maru Gothic',monospace;
+    font-size:14px;
+    font-weight:700;
+    outline:none;
+    flex:1;
+    min-width:180px;
+  }
+  .add-bar-coords::placeholder{color:#A9BBAE; font-weight:600; font-family:'Zen Maru Gothic',sans-serif;}
+  .add-bar-coords:focus{border-color:var(--sky);}
+
   .timer-box{border-top:2px dashed var(--cream-deep); padding-top:14px; display:flex; flex-direction:column; gap:10px;}
   .timer-label{font-size:11.5px; color:#9AAB9F; font-weight:700; letter-spacing:.02em;}
   .preset-row{display:flex; gap:8px;}
@@ -584,13 +631,12 @@
     <button class="filter-tab active" data-role="filter" data-category="all">全部</button>
     <button class="filter-tab" data-role="filter" data-category="沐田">沐田</button>
     <button class="filter-tab" data-role="filter" data-category="達醬">達醬</button>
-    <button class="filter-tab" data-role="filter" data-category="柴田">柴田</button>
-    <button class="filter-tab" data-role="filter" data-category="暫存">暫存</button>
     <button class="filter-tab" data-role="filter" data-category="其他">其他</button>
   </div>
 
   <div class="add-bar">
     <input type="text" id="newFieldName" placeholder="🌼 新花田名稱，例如：後院 A 區" maxlength="24" autocomplete="off">
+    <input type="text" id="newFieldCoords" class="add-bar-coords" placeholder="🧭 座標（選填）" maxlength="60" autocomplete="off">
     <button class="add-btn" id="addBtn">＋ 新增花田</button>
   </div>
 
@@ -631,7 +677,7 @@ const PRESETS = [
   { label:'6 小時', minutes: 6*60 },
   { label:'3 小時', minutes: 3*60 }
 ];
-const CATEGORIES = ['沐田', '達醬', '柴田', '暫存', '其他'];
+const CATEGORIES = ['沐田', '達醬', '其他'];
 let apiUrl = DEFAULT_API_URL;
 let fields = [];
 let initialLoading = true;
@@ -802,6 +848,7 @@ async function fetchFields(){
           id: f.id,
           name: f.name,
           species: f.species || '',
+          coords: f.coords || '',
           category: f.category || '其他',
           harvest: f.harvest === true || f.harvest === 'TRUE',
           fridge: f.fridge === true || f.fridge === 'TRUE',
@@ -820,10 +867,11 @@ async function fetchFields(){
         }
         return merged;
       }).sort((a,b) => {
-        const aKey = a.timerEnd !== null ? a.timerEnd : Infinity;
-        const bKey = b.timerEnd !== null ? b.timerEnd : Infinity;
-        if(aKey !== bKey) return aKey - bKey;
-        return b.createdAt - a.createdAt;
+        const aCooling = a.timerEnd !== null;
+        const bCooling = b.timerEnd !== null;
+        if(aCooling !== bCooling) return aCooling ? -1 : 1;
+        if(aCooling && bCooling) return a.timerEnd - b.timerEnd;
+        return a.name.localeCompare(b.name, 'zh-Hant');
       });
       harvestLog = (data.log || []).map(l => ({
         fieldName: l.fieldName,
@@ -857,16 +905,16 @@ async function callApi(payload){
   }
 }
 
-async function addField(name){
+async function addField(name, coords){
   const tempId = 'temp' + Date.now();
   fields.unshift({
-    id: tempId, name, species:'', category:'其他',
+    id: tempId, name, species:'', coords: coords || '', category:'其他',
     harvest:false, fridge:false, ready:false,
     createdAt: Date.now(), timerEnd:null, timerMinutes:null,
     hiddenTimerEnd:null, hiddenTimerMinutes:null
   });
   render();
-  const result = await callApi({action:'add', name});
+  const result = await callApi({action:'add', name, coords: coords || ''});
   if(result && result.ok && result.id){
     const f = fields.find(x=>x.id===tempId);
     if(f) f.id = result.id;
@@ -882,6 +930,9 @@ async function renameField(id, name){
 }
 async function setSpecies(id, species){
   callApi({action:'setSpecies', id, species: species.trim()});
+}
+async function setCoords(id, coords){
+  callApi({action:'setCoords', id, coords: coords.trim()});
 }
 async function setCategory(id, category){
   const f = fields.find(x=>x.id===id);
@@ -1046,6 +1097,12 @@ function cardTemplate(f){
       <input class="species-input" data-role="species" placeholder="選填" value="${escapeHtml(f.species)}" maxlength="20">
     </div>
 
+    <div class="coords-row">
+      <span class="coords-label">座標🧭</span>
+      <input class="coords-input" data-role="coords" placeholder="選填" value="${escapeHtml(f.coords || '')}" maxlength="60">
+      <button class="coords-copy-btn" data-role="copy-coords" type="button" title="複製座標">📋</button>
+    </div>
+
     <div class="timer-box">
       ${hasTimer ? `
         <div class="timer-active-row">
@@ -1139,6 +1196,29 @@ function render(){
   grid.querySelectorAll('[data-role="species"]').forEach(inp=>{
     inp.addEventListener('change', e=>{
       setSpecies(e.target.closest('.card').dataset.id, e.target.value);
+    });
+  });
+  grid.querySelectorAll('[data-role="coords"]').forEach(inp=>{
+    inp.addEventListener('change', e=>{
+      setCoords(e.target.closest('.card').dataset.id, e.target.value);
+    });
+  });
+  grid.querySelectorAll('[data-role="copy-coords"]').forEach(btn=>{
+    btn.addEventListener('click', async e=>{
+      const card = e.target.closest('.card');
+      const input = card.querySelector('[data-role="coords"]');
+      const value = input.value.trim();
+      if(!value){ toast('這塊花田還沒有填座標'); return; }
+      try{
+        await navigator.clipboard.writeText(value);
+        toast('座標已複製');
+        e.target.classList.add('copied');
+        setTimeout(()=>e.target.classList.remove('copied'), 1200);
+      }catch(err){
+        input.select();
+        document.execCommand('copy');
+        toast('座標已複製');
+      }
     });
   });
   grid.querySelectorAll('[data-role="category"]').forEach(btn=>{
@@ -1254,17 +1334,23 @@ function startTicker(){
 
 document.getElementById('addBtn').addEventListener('click', ()=>{
   const input = document.getElementById('newFieldName');
+  const coordsInput = document.getElementById('newFieldCoords');
   const name = input.value.trim();
+  const coords = coordsInput.value.trim();
   if(!name) return;
-  addField(name);
+  addField(name, coords);
   input.value = '';
+  coordsInput.value = '';
 });
 document.getElementById('newFieldName').addEventListener('keydown', e=>{
   if(e.key === 'Enter') document.getElementById('addBtn').click();
 });
+document.getElementById('newFieldCoords').addEventListener('keydown', e=>{
+  if(e.key === 'Enter') document.getElementById('addBtn').click();
+});
 document.getElementById('grid').addEventListener('focusout', e=>{
   const role = e.target.dataset ? e.target.dataset.role : null;
-  if(e.target.tagName === 'INPUT' && (role === 'name' || role === 'species')){
+  if(e.target.tagName === 'INPUT' && (role === 'name' || role === 'species' || role === 'coords')){
     setTimeout(()=>{ if(!isEditingField()) render(); }, 150);
   }
 });
